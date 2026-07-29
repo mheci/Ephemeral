@@ -1,0 +1,208 @@
+import type {
+  BrowserAdapter,
+  BrowserIdentity,
+  BrowserTab,
+  DownloadEraseResult,
+} from "./browser-adapter";
+
+const STATE_KEY = "ephemeralState";
+const FALLBACK_COLORS = ["blue", "green", "orange", "pink", "purple", "red", "yellow"];
+const FALLBACK_ICONS = [
+  "fingerprint",
+  "briefcase",
+  "circle",
+  "dollar",
+  "gift",
+  "vacation",
+];
+
+type DynamicContextualIdentities = typeof browser.contextualIdentities & {
+  getSupportedColors?: () => Promise<string[]>;
+  getSupportedIcons?: () => Promise<string[]>;
+};
+
+function toIdentity(
+  identity: browser.contextualIdentities.ContextualIdentity,
+): BrowserIdentity {
+  return {
+    cookieStoreId: identity.cookieStoreId,
+    name: identity.name,
+    color: identity.color,
+    icon: identity.icon,
+  };
+}
+
+export class FirefoxAdapter implements BrowserAdapter {
+  public async loadState(): Promise<unknown> {
+    const stored = await browser.storage.local.get(STATE_KEY);
+    return stored[STATE_KEY];
+  }
+
+  public async saveState(value: unknown): Promise<void> {
+    await browser.storage.local.set({ [STATE_KEY]: value });
+  }
+
+  public async getBrowserSessionId(): Promise<string | undefined> {
+    const stored = (await browser.storage.session.get("browserSessionId")) as Record<
+      string,
+      unknown
+    >;
+    const value: unknown = stored["browserSessionId"];
+    return typeof value === "string" ? value : undefined;
+  }
+
+  public async setBrowserSessionId(id: string): Promise<void> {
+    await browser.storage.session.set({ browserSessionId: id });
+  }
+
+  public async createIdentity(details: {
+    name: string;
+    color: string;
+    icon: string;
+  }): Promise<BrowserIdentity> {
+    const identity = await browser.contextualIdentities.create({
+      name: details.name,
+      color: details.color,
+      icon: details.icon,
+    });
+    return toIdentity(identity);
+  }
+
+  public async getIdentity(
+    cookieStoreId: string,
+  ): Promise<BrowserIdentity | undefined> {
+    try {
+      return toIdentity(await browser.contextualIdentities.get(cookieStoreId));
+    } catch {
+      return undefined;
+    }
+  }
+
+  public async queryIdentities(): Promise<BrowserIdentity[]> {
+    const identities = await browser.contextualIdentities.query({});
+    return identities.map(toIdentity);
+  }
+
+  public async removeIdentity(cookieStoreId: string): Promise<void> {
+    await browser.contextualIdentities.remove(cookieStoreId);
+  }
+
+  public async getSupportedColors(): Promise<string[]> {
+    const api = browser.contextualIdentities as DynamicContextualIdentities;
+    try {
+      return api.getSupportedColors
+        ? await api.getSupportedColors()
+        : [...FALLBACK_COLORS];
+    } catch {
+      return [...FALLBACK_COLORS];
+    }
+  }
+
+  public async getSupportedIcons(): Promise<string[]> {
+    const api = browser.contextualIdentities as DynamicContextualIdentities;
+    try {
+      return api.getSupportedIcons
+        ? await api.getSupportedIcons()
+        : [...FALLBACK_ICONS];
+    } catch {
+      return [...FALLBACK_ICONS];
+    }
+  }
+
+  public async queryTabs(cookieStoreId: string): Promise<BrowserTab[]> {
+    const tabs = await browser.tabs.query({ cookieStoreId });
+    return tabs.flatMap((tab) =>
+      tab.id === undefined
+        ? []
+        : [
+            {
+              id: tab.id,
+              ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
+            },
+          ],
+    );
+  }
+
+  public async getTab(tabId: number): Promise<BrowserTab | undefined> {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      return {
+        id: tabId,
+        ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  public async createTab(cookieStoreId: string, url: string): Promise<number> {
+    // Firefox rejects an explicit `about:newtab` combined with cookieStoreId.
+    // Omitting url is the supported way to open Firefox's native New Tab page
+    // while still assigning the new tab to the requested container.
+    const tab = await browser.tabs.create(
+      url === "about:newtab"
+        ? { active: true, cookieStoreId }
+        : { active: true, cookieStoreId, url },
+    );
+    if (tab.id === undefined) throw new Error("Firefox created a tab without an ID");
+    return tab.id;
+  }
+
+  public async closeTabs(tabIds: number[]): Promise<void> {
+    if (tabIds.length > 0) await browser.tabs.remove(tabIds);
+  }
+
+  public async removeScopedSiteData(cookieStoreId: string): Promise<void> {
+    await browser.browsingData.remove(
+      { cookieStoreId, since: 0 },
+      { cookies: true, indexedDB: true, localStorage: true },
+    );
+  }
+
+  public async hasDownloadsPermission(): Promise<boolean> {
+    return browser.permissions.contains({ permissions: ["downloads"] });
+  }
+
+  public async requestDownloadsPermission(): Promise<boolean> {
+    return browser.permissions.request({ permissions: ["downloads"] });
+  }
+
+  public async removeDownloadsPermission(): Promise<boolean> {
+    return browser.permissions.remove({ permissions: ["downloads"] });
+  }
+
+  public async eraseDownloadMetadata(
+    cookieStoreId: string,
+  ): Promise<DownloadEraseResult> {
+    const erasedIds = await browser.downloads.erase({ cookieStoreId });
+    const remainingItems = await browser.downloads.search({ cookieStoreId, limit: 1 });
+    return { erasedIds, remaining: remainingItems.length };
+  }
+
+  public async scheduleAlarm(name: string, when: number): Promise<void> {
+    await browser.alarms.create(name, { when });
+  }
+
+  public async cancelAlarm(name: string): Promise<void> {
+    await browser.alarms.clear(name);
+  }
+
+  public async setBadge(text: string, color: string): Promise<void> {
+    await Promise.all([
+      browser.action.setBadgeText({ text }),
+      browser.action.setBadgeBackgroundColor({ color }),
+    ]);
+  }
+
+  public extensionVersion(): string {
+    return browser.runtime.getManifest().version;
+  }
+
+  public async browserVersion(): Promise<string | undefined> {
+    try {
+      return (await browser.runtime.getBrowserInfo()).version;
+    } catch {
+      return undefined;
+    }
+  }
+}

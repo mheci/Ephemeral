@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 180" role="img" aria-labelledby="title desc">
+  <title id="title">Ephemeral</title><desc id="desc">A clean shield dissolving into three particles beside the Ephemeral wordmark.</desc>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0d6570"/><stop offset="1" stop-color="#32b8bd"/></linearGradient></defs>
+  <g transform="translate(18 10)">
+    <path fill="url(#g)" d="M70 8 130 30v45c0 39-24 65-60 81C34 140 10 114 10 75V30L70 8Z"/>
+    <path fill="#fff" fill-opacity=".95" d="M70 31 108 45v30c0 25-14 43-38 56-24-13-38-31-38-56V45l38-14Zm0 18-21 8v18c0 15 7 26 21 35 14-9 21-20 21-35V57l-21-8Z"/>
+    <circle cx="137" cy="101" r="8" fill="#32b8bd"/><circle cx="151" cy="122" r="5" fill="#73d5d4"/><circle cx="139" cy="140" r="3.5" fill="#b3ece8"/>
+  </g>
+  <text x="195" y="116" fill="#17232a" font-family="Inter,system-ui,sans-serif" font-size="78" font-weight="700" letter-spacing="-2">Ephemeral</text>
+</svg>

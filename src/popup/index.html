@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ephemeral</title>
+    <link rel="stylesheet" href="../ui.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="popup-body" data-app-state="booting">
+    <header class="popup-header">
+      <div class="brand">
+        <img src="../icons/icon-48.png" width="32" height="32" alt="" />
+        <div>
+          <h1>Ephemeral</h1>
+          <p>Disposable containers</p>
+        </div>
+      </div>
+      <span id="health" class="status-pill" aria-live="polite">Starting…</span>
+    </header>
+
+    <section id="startup-panel" class="popup-system" aria-live="polite">
+      <span class="popup-spinner" aria-hidden="true"></span>
+      <div>
+        <strong>Connecting to lifecycle service</strong
+        ><small>This should take less than a second.</small
+        ><a href="index.html">Reload</a>
+      </div>
+    </section>
+
+    <section id="error-panel" class="popup-system error" role="alert" hidden>
+      <span class="error-mark" aria-hidden="true">!</span>
+      <div>
+        <strong>Ephemeral is unavailable</strong
+        ><small id="error-message">The background process did not respond.</small
+        ><button id="retry-popup" class="text-button" type="button">Try again</button>
+      </div>
+    </section>
+
+    <main id="popup-content" aria-busy="true">
+      <section class="popup-summary" aria-label="Session summary">
+        <div><strong id="active-count">—</strong><span>sessions</span></div>
+        <div><strong id="pending-count">—</strong><span>processing</span></div>
+        <button
+          id="refresh-popup"
+          class="refresh-button"
+          type="button"
+          aria-label="Refresh"
+        >
+          <span aria-hidden="true">↻</span>
+        </button>
+      </section>
+
+      <section class="create-panel" aria-labelledby="create-title">
+        <div class="popup-section-heading">
+          <div>
+            <p class="eyebrow">Start private</p>
+            <h2 id="create-title">New temporary session</h2>
+          </div>
+        </div>
+        <button id="create-once" class="create-card primary-create" type="button">
+          <span class="create-icon" aria-hidden="true">＋</span>
+          <span
+            ><strong>Disposable tab</strong
+            ><small>Clean when its last tab closes</small></span
+          >
+          <span aria-hidden="true">›</span>
+        </button>
+        <button id="create-reusable" class="create-card" type="button">
+          <span class="create-icon reusable" aria-hidden="true">↻</span>
+          <span
+            ><strong>Temporary space</strong
+            ><small>Reusable until its policy expires</small></span
+          >
+          <span aria-hidden="true">›</span>
+        </button>
+      </section>
+
+      <section class="popup-section" aria-labelledby="active-title">
+        <div class="popup-section-heading row">
+          <div>
+            <p class="eyebrow">Live</p>
+            <h2 id="active-title">Managed sessions</h2>
+          </div>
+          <button id="cleanup-all" class="text-button danger-text" type="button" hidden>
+            Clean all
+          </button>
+        </div>
+        <div id="container-list" class="popup-session-list">
+          <div class="popup-skeleton" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="popup-section recent-section" aria-labelledby="recent-title">
+        <div class="popup-section-heading">
+          <div>
+            <p class="eyebrow">Local record</p>
+            <h2 id="recent-title">Recent cleanup</h2>
+          </div>
+        </div>
+        <div id="recent-cleanup" class="recent-list">
+          <div class="popup-skeleton short" aria-hidden="true"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="popup-footer">
+      <button id="open-options" class="text-button" type="button">
+        Open dashboard
+      </button>
+      <span class="local-only"
+        ><span aria-hidden="true">●</span> No network access</span
+      >
+    </footer>
+    <div
+      id="notification"
+      class="notification"
+      role="status"
+      aria-live="polite"
+      hidden
+    ></div>
+    <script src="popup.js"></script>
+  </body>
+</html>

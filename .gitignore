@@ -1,0 +1,10 @@
+artifacts/
+build/
+coverage/
+node_modules/
+*.log
+*.xpi
+*.zip
+.DS_Store
+.geckodriver
+.web-extension-id

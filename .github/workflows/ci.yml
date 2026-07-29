@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=high
+      - run: npm run secrets:audit -- --history
+      - run: npm run check
+      - run: npm run coverage
+      - run: npm run bench
+      - run: npm run package
+      - run: npm run package:source
+      - run: sha256sum artifacts/* | tee artifacts/SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-build
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  firefox:
+    name: Firefox ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [latest, latest-beta]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: ${{ matrix.version }}
+      - name: Install geckodriver
+        run: |
+          curl -fsSL https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz -o /tmp/geckodriver.tar.gz
+          echo "0bde38707eb0a686a20c6bd50f4adcc7d60d4f73c60eb83ee9e0db8f65823e04  /tmp/geckodriver.tar.gz" | sha256sum --check
+          tar -xzf /tmp/geckodriver.tar.gz -C /tmp
+          sudo install -m 0755 /tmp/geckodriver /usr/local/bin/geckodriver
+      - run: npm ci --ignore-scripts
+      - run: npm run test:e2e:prepare
+      - run: FIREFOX_BIN="$(command -v firefox)" npm run test:e2e

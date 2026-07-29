@@ -1,0 +1,70 @@
+{
+  "manifest_version": 3,
+  "name": "Ephemeral",
+  "version": "1.2.0",
+  "description": "Privacy-first disposable Firefox containers with transparent, bounded cleanup.",
+  "homepage_url": "https://github.com/astarling-x/Ephemeral",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ephemeral@astarling-x.github.io",
+      "strict_min_version": "153.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "permissions": [
+    "alarms",
+    "browsingData",
+    "contextualIdentities",
+    "cookies",
+    "storage"
+  ],
+  "optional_permissions": ["downloads"],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "action": {
+    "default_title": "Ephemeral disposable containers",
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "64": "icons/icon-64.png"
+    },
+    "theme_icons": [
+      {
+        "light": "icons/toolbar-light-32.png",
+        "dark": "icons/toolbar-dark-32.png",
+        "size": 32
+      }
+    ]
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "64": "icons/icon-64.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Period",
+        "mac": "MacCtrl+Shift+Period"
+      },
+      "description": "Open Ephemeral"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  },
+  "incognito": "not_allowed"
+}
