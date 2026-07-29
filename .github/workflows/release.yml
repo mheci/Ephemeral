@@ -1,0 +1,118 @@
+name: Signed release
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: "45 18 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  WEB_EXT_VERSION: 10.5.0
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: amo-production
+    steps:
+      - name: Resolve release
+        id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="$EVENT_TAG"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then TAG="$INPUT_TAG"; fi
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            TAG=$(gh api "repos/${{ github.repository }}/releases" --jq '[.[] | select(.draft)][0].tag_name // empty')
+            if [ -z "$TAG" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" --jq .id)
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+          gh api --method PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" -f draft=true >/dev/null
+      - uses: actions/checkout@v7
+        if: steps.release.outputs.skip != 'true'
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        if: steps.release.outputs.skip != 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: browser-actions/setup-firefox@v1
+        if: steps.release.outputs.skip != 'true'
+        with:
+          firefox-version: latest
+      - name: Install geckodriver
+        if: steps.release.outputs.skip != 'true'
+        run: |
+          curl -fsSL https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz -o /tmp/geckodriver.tar.gz
+          echo "0bde38707eb0a686a20c6bd50f4adcc7d60d4f73c60eb83ee9e0db8f65823e04  /tmp/geckodriver.tar.gz" | sha256sum --check
+          tar -xzf /tmp/geckodriver.tar.gz -C /tmp
+          sudo install -m 0755 /tmp/geckodriver /usr/local/bin/geckodriver
+      - run: npm ci --ignore-scripts
+        if: steps.release.outputs.skip != 'true'
+      - name: Verify version and source
+        if: steps.release.outputs.skip != 'true'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          test "$TAG" = "v$VERSION"
+          test "$VERSION" = "$(node -p "require('./src/manifest.json').version")"
+          npm audit --audit-level=high
+          npm run secrets:audit -- --history
+          npm run check
+          npm run coverage
+          npm run test:e2e:prepare
+          FIREFOX_BIN="$(command -v firefox)" npm run test:e2e
+          npm run package
+          npm run package:source
+      - name: Submit for unlisted Mozilla signing
+        if: steps.release.outputs.skip != 'true'
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p signed
+          npm exec --yes --package="web-ext@$WEB_EXT_VERSION" -- web-ext sign \
+            --source-dir build \
+            --artifacts-dir signed \
+            --channel unlisted \
+            --amo-metadata amo-metadata.json \
+            --upload-source-code "artifacts/ephemeral-$VERSION-source.zip" \
+            --api-key "$AMO_JWT_ISSUER" \
+            --api-secret "$AMO_JWT_SECRET" \
+            --approval-timeout 900000
+          XPI=$(find signed -maxdepth 1 -name '*.xpi' -print -quit)
+          test -n "$XPI"
+          cp "$XPI" "artifacts/ephemeral-$VERSION-signed.xpi"
+          unzip -p "artifacts/ephemeral-$VERSION-signed.xpi" manifest.json | jq -e --arg version "$VERSION" '.version == $version and .browser_specific_settings.gecko.id == "ephemeral@astarling-x.github.io"' >/dev/null
+          (cd artifacts && sha256sum "ephemeral-$VERSION-signed.xpi" "ephemeral-$VERSION.zip" "ephemeral-$VERSION-source.zip" > SHA256SUMS)
+      - name: Publish verified assets
+        if: steps.release.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_ID: ${{ steps.release.outputs.id }}
+        run: |
+          gh release upload "$TAG" artifacts/* --clobber
+          gh api --method PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" -f draft=false -f prerelease=false -f make_latest=true >/dev/null

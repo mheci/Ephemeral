@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "en-US": "Disposable Firefox containers with automatic, transparent, privacy-first cleanup."
+  },
+  "categories": ["privacy-security", "tabs"],
+  "homepage": {
+    "en-US": "https://github.com/astarling-x/Ephemeral"
+  },
+  "support_url": {
+    "en-US": "https://github.com/astarling-x/Ephemeral/issues"
+  },
+  "requires_payment": false,
+  "version": {
+    "license": "MPL-2.0",
+    "approval_notes": "Ephemeral uses a readable, non-minified TypeScript bundle and has no runtime dependencies. Rebuild with `npm ci && npm run package`; see docs/amo-build.md. There are no host permissions, content scripts, telemetry, remote code, or outbound extension-page connections. The optional downloads permission erases only download-manager entries filtered by Firefox cookieStoreId and never deletes files. docs/api-limitations.md documents categories that Firefox cannot safely scope to a container. Browser-exit policy runs on the next runtime.onStartup because WebExtensions cannot guarantee asynchronous shutdown cleanup.",
+    "release_notes": {
+      "en-US": "Fixes container creation with the default about:newtab start page. Ephemeral now uses Firefox's supported URL-omission path when assigning a native New Tab page to a cookieStoreId. Includes adapter and real-Firefox openTab regression coverage."
+    }
+  }
+}

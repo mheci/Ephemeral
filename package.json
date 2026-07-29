@@ -1,0 +1,48 @@
+{
+  "name": "ephemeral-firefox",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Privacy-first disposable Firefox containers",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:test": "EPHEMERAL_TEST_BUILD=1 node scripts/build.mjs",
+    "package": "npm run build && node scripts/package.mjs",
+    "package:source": "node scripts/package-source.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration tests/stress",
+    "test:e2e": "node tests/e2e/run.mjs",
+    "test:e2e:prepare": "npm run build:test && node scripts/package.mjs --test",
+    "coverage": "vitest run --coverage",
+    "bench": "vitest bench --run",
+    "manifest:validate": "node scripts/validate-manifest.mjs",
+    "build:verify": "node scripts/verify-build.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "secrets:audit": "node scripts/audit-secrets.mjs",
+    "extension:lint": "npm run build && npm run build:verify && npm run manifest:validate",
+    "check": "npm run format && npm run lint && npm run typecheck && npm run docs:check && npm run secrets:audit && npm run test && npm run extension:lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@types/firefox-webext-browser": "143.0.0",
+    "@vitest/coverage-v8": "4.1.10",
+    "esbuild": "0.28.1",
+    "eslint": "10.8.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "16.4.0",
+    "prettier": "3.8.1",
+    "selenium-webdriver": "4.40.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  }
+}
