@@ -83,6 +83,7 @@ jobs:
           npm run coverage
           npm run test:e2e:prepare
           FIREFOX_BIN="$(command -v firefox)" npm run test:e2e
+          rm -f artifacts/ephemeral-test-*.zip
           npm run package
           npm run package:source
       - name: Submit for unlisted Mozilla signing
