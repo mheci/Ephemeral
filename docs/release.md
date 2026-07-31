@@ -1,6 +1,6 @@
-# Build and release
+# Build and Release
 
-## Local production check
+## Local Check
 
 ```sh
 npm ci
@@ -15,48 +15,40 @@ npm run package
 npm run package:source
 ```
 
-Run both package commands twice and compare SHA-256 hashes. The extension archive must contain no tests, source maps, credentials, documentation artwork, or WebAssembly.
+Run package commands twice, compare SHA-256. Archive must have no tests, sourcemaps, creds, artwork, WASM.
 
-## Continuous integration
+## CI
 
-Every push and pull request runs:
+Every push/PR runs: format, lint, typecheck, docs:check, secrets:audit, unit/integration/stress/coverage, manifest/package validation, npm audit, real-Firefox stable+Beta e2e, CodeQL, dependency review.
 
-- formatting, typed linting, and strict TypeScript checks;
-- documentation and complete-history secret checks;
-- unit, integration, stress, and coverage tests;
-- manifest and package-layout validation;
-- dependency audit;
-- real-Firefox tests on stable and Beta;
-- CodeQL and dependency review.
+Dependabot grouped, requires checks + owner approval.
 
-Dependabot groups development and workflow updates. Automated dependency pull requests require all checks and owner review before merge.
+## Release Prep
 
-## Release preparation
+Release Please uses conventional commits, maintains release PR that updates:
 
-Release Please reads conventional commit messages and maintains a release pull request. The release pull request updates:
+- package.json, package-lock.json
+- src/manifest.json
+- CHANGELOG.md
+- tag + GitHub notes
 
-- `package.json` and `package-lock.json`;
-- `src/manifest.json`;
-- `CHANGELOG.md`;
-- the release tag and GitHub release notes.
+Only reviewed main changes eligible.
 
-Only reviewed changes on `main` are eligible for release.
+## Signing
 
-## Signing and publication
+Release workflow rebuilds, retests tagged source, creates deterministic archives, submits via Mozilla unlisted signing channel (JWT), verifies returned XPI, uploads:
 
-The release workflow rebuilds and retests the tagged source, creates deterministic extension and source archives, submits the extension through Mozilla's unlisted signing channel, verifies the returned XPI, and uploads these assets to GitHub:
+- ephemeral-<version>-signed.xpi
+- ephemeral-<version>.zip
+- ephemeral-<version>-source.zip
+- SHA256SUMS
 
-- `ephemeral-<version>-signed.xpi`;
-- `ephemeral-<version>.zip`;
-- `ephemeral-<version>-source.zip`;
-- `SHA256SUMS`.
+AMO creds in protected `amo-production` env. No public AMO listing – GitHub is distribution.
 
-AMO credentials are stored in the protected `amo-production` GitHub environment. The workflow does not create a public AMO listing. GitHub is the distribution location.
-
-The release is considered complete only when the signed XPI is attached and its manifest version, extension ID, Firefox installation, UI startup, and cleanup smoke test have passed.
+Complete only when signed XPI attached and its version, ID, install, UI startup, cleanup smoke test pass.
 
 ## Versioning
 
-- Patch: bug fixes and maintenance
-- Minor: backward-compatible features or meaningful default changes
-- Major: incompatible settings, storage, permission, or behavior changes
+- Patch: bug fixes
+- Minor: backward-compatible features or default changes
+- Major: incompatible settings, storage, perms, behavior

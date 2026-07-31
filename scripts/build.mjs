@@ -26,6 +26,14 @@ async function copyStatic() {
       path.join(root, "src/options/options.css"),
       path.join(output, "options/options.css"),
     ),
+    cp(
+      path.join(root, "src/onboarding/index.html"),
+      path.join(output, "onboarding/index.html"),
+    ),
+    cp(
+      path.join(root, "src/onboarding/onboarding.css"),
+      path.join(output, "onboarding/onboarding.css"),
+    ),
   ]);
   if (testBuild) {
     await cp(path.join(root, "tests/e2e/driver"), path.join(output, "test"), {
@@ -63,6 +71,10 @@ const targets = [
   {
     entryPoints: [path.join(root, "src/options/options.ts")],
     outfile: path.join(output, "options/options.js"),
+  },
+  {
+    entryPoints: [path.join(root, "src/onboarding/onboarding.ts")],
+    outfile: path.join(output, "onboarding/onboarding.js"),
   },
 ];
 

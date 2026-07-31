@@ -53,14 +53,20 @@ export async function verifyBuild() {
     "background.js",
     "popup/popup.js",
     "options/options.js",
+    "onboarding/onboarding.js",
     "popup/index.html",
     "options/index.html",
+    "onboarding/index.html",
   ];
   for (const relative of [...expectedEntries, ...manifestPaths(manifest)]) {
     await assertFile(path.resolve(BUILD, relative), "manifest/build entry");
   }
 
-  for (const relative of ["popup/index.html", "options/index.html"]) {
+  for (const relative of [
+    "popup/index.html",
+    "options/index.html",
+    "onboarding/index.html",
+  ]) {
     const file = path.join(BUILD, relative);
     const html = await readFile(file, "utf8");
     for (const reference of localReferences(html)) {
@@ -76,7 +82,7 @@ export async function verifyBuild() {
   if (production) {
     const files = await readdir(BUILD, { recursive: true });
     const forbidden = files.filter((file) =>
-      /(^|\/)(test|tests)(\/|$)|\.(?:map|wasm)$/u.test(file),
+      /(^|\/)(test|tests)(\/|$)|\\.(?:map|wasm)$/u.test(file),
     );
     if (forbidden.length > 0)
       throw new Error(`Forbidden production files: ${forbidden.join(", ")}`);

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to Ephemeral</title>
+    <link rel="stylesheet" href="../ui.css" />
+    <link rel="stylesheet" href="onboarding.css" />
+  </head>
+  <body class="onboarding-body">
+    <div class="onboarding-container">
+      <header class="onboarding-header">
+        <img src="../icons/icon-96.png" width="72" height="72" alt="" />
+        <h1>Welcome to Ephemeral</h1>
+        <p>Private tabs that clean themselves. One keypress, zero traces.</p>
+      </header>
+
+      <div class="onboarding-progress">
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill" style="width: 25%"></div>
+        </div>
+        <span id="progress-text">Step 1 of 4</span>
+      </div>
+
+      <main id="onboarding-content">
+        <section class="onboarding-step active" data-step="1">
+          <div class="step-icon">✨</div>
+          <h2>What is Ephemeral?</h2>
+          <p>
+            Ephemeral gives you <strong>temporary containers</strong> – isolated
+            spaces for browsing that don't leave traces.
+          </p>
+          <p>
+            Think of it like a private browsing tab, but even more isolated and
+            automatic. When you close it, everything inside is erased.
+          </p>
+          <div class="example-box">
+            <span>🧹</span>
+            <div>
+              <strong>Complete cleanup</strong>
+              <p>Cookies, site storage, cache, everything for that container – gone.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="onboarding-step" data-step="2">
+          <div class="step-icon">⌨️</div>
+          <h2>How to open a private tab</h2>
+          <p>The fastest way is a hotkey – no mouse needed.</p>
+          <div class="hotkey-demo">
+            <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd>
+            <span>New ephemeral tab (auto-cleans on close)</span>
+          </div>
+          <div class="hotkey-demo secondary">
+            <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>U</kbd>
+            <span>New ephemeral space (stays open for many tabs)</span>
+          </div>
+          <p class="hint">You can change these in Firefox Add-ons → Gear → Manage Shortcuts</p>
+          <div class="example-box">
+            <span>🖱️</span>
+            <div>
+              <strong>Or use your mouse</strong>
+              <p>Click the Ephemeral toolbar button, or right-click any link → <em>Open in ephemeral tab</em></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="onboarding-step" data-step="3">
+          <div class="step-icon">🔒</div>
+          <h2>How it stays private</h2>
+          <p>Each ephemeral tab lives in its own isolated container.</p>
+          <div class="cleanup-visual">
+            <div class="cleanup-item">
+              <span class="cleanup-icon">🍪</span>
+              <span>Cookies</span>
+              <span class="check">✓</span>
+            </div>
+            <div class="cleanup-item">
+              <span class="cleanup-icon">💾</span>
+              <span>Site storage</span>
+              <span class="check">✓</span>
+            </div>
+            <div class="cleanup-item">
+              <span class="cleanup-icon">🗄️</span>
+              <span>Cache</span>
+              <span class="check">✓</span>
+            </div>
+            <div class="cleanup-item">
+              <span class="cleanup-icon">👻</span>
+              <span>Service workers</span>
+              <span class="check">✓</span>
+            </div>
+            <div class="cleanup-item">
+              <span class="cleanup-icon">📑</span>
+              <span>Tabs & identity</span>
+              <span class="check">✓</span>
+            </div>
+          </div>
+          <p class="hint">Firefox doesn't allow us to delete global history or saved passwords – we never touch those. We only clean what belongs to the ephemeral container.</p>
+        </section>
+
+        <section class="onboarding-step" data-step="4">
+          <div class="step-icon">🚀</div>
+          <h2>You're ready!</h2>
+          <p>That's it. No complicated settings needed – it just works.</p>
+          <p>When you close the last tab of an ephemeral container, it's automatically cleaned. You can also clean manually from the popup or dashboard.</p>
+          <div class="final-actions">
+            <button id="try-ephemeral" class="button primary large">
+              <span>✨</span> Try a new ephemeral tab
+            </button>
+            <button id="open-dashboard" class="button secondary">
+              Open dashboard
+            </button>
+          </div>
+          <p class="hint">Tip: The extension is invisible in background – no telemetry, no network, no tracking. Everything stays on your device.</p>
+        </section>
+      </main>
+
+      <footer class="onboarding-footer">
+        <button id="prev-step" class="button secondary" disabled>Back</button>
+        <div class="footer-dots">
+          <span class="dot active" data-step="1"></span>
+          <span class="dot" data-step="2"></span>
+          <span class="dot" data-step="3"></span>
+          <span class="dot" data-step="4"></span>
+        </div>
+        <button id="next-step" class="button primary">Next</button>
+      </footer>
+    </div>
+    <script src="onboarding.js"></script>
+  </body>
+</html>

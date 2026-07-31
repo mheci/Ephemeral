@@ -1,104 +1,98 @@
-# Technical design
+# Technical Design
 
 ## Overview
 
-Ephemeral is a Firefox Manifest V3 extension. Its background page is non-persistent: Firefox starts it when an event requires work and may stop it when idle.
+MV3 extension, non-persistent background (event-driven). Four core areas:
 
-The extension contains four main areas:
+- **Firefox adapter:** only Firefox API calls
+- **Container manager:** creates containers, opens tabs
+- **Controller:** tab/ alarm/ startup events, tab ownership tracking
+- **Cleanup engine:** ordered cleanup + verification + recovery
 
-- **Firefox adapter:** the only code that calls Firefox APIs directly.
-- **Container manager:** creates containers, opens tabs, and records activity.
-- **Lifecycle controller:** responds to tab, alarm, startup, and user events.
-- **Cleanup engine:** performs ordered cleanup, verification, recovery, and reporting.
+State stored locally in one versioned record. UI talks to background via validated messages.
 
-All important state is stored locally in one versioned record. UI pages communicate with the background page through validated same-extension messages.
+## Container Creation
 
-## Container creation
+1. Store creation intent
+2. Create contextual identity (random token in name for recovery)
+3. Replace intent with managed record
+4. Schedule inactivity alarm
+5. Open start page or custom URL (about:blank, about:newtab handled specially – Firefox rejects explicit about:newtab with cookieStoreId, so omit URL)
 
-1. Store a creation intent before asking Firefox to create a container.
-2. Create the Firefox contextual identity.
-3. Replace the intent with the managed-container record.
-4. Schedule inactivity cleanup when enabled.
-5. Open the requested start page.
+## Cleanup Order (monster)
 
-Firefox rejects an explicit `about:newtab` URL when a container cookie-store ID is supplied. Ephemeral therefore omits the URL for that setting and lets Firefox open its native New Tab page inside the container. `about:blank`, HTTP, and HTTPS pages are passed explicitly after validation.
+1. Record pending
+2. Recheck condition (e.g., new tab opened?)
+3. Close tabs, confirm closed
+4. Remove scoped site data: cookies, indexedDB, localStorage, cacheStorage, serviceWorkers – each in own try/catch for compat
+5. Optional download-history erase (if permission)
+6. Remove identity
+7. Verify identity + tabs gone
+8. Remove extension state, append bounded report
 
-A random token in the container name allows recovery to identify an interrupted creation without claiming unrelated user containers.
-
-## Cleanup order
-
-1. Record a pending cleanup operation.
-2. Recheck the lifecycle condition.
-3. Close the container's tabs and confirm they are closed.
-4. Request container-scoped removal of cookies, IndexedDB, local storage, and session storage.
-5. Optionally erase download-history entries associated with the container.
-6. Remove the Firefox contextual identity.
-7. Confirm the identity and tabs are absent.
-8. Remove active extension state and append a bounded cleanup report.
-
-If scoped cleanup fails, the identity remains available for retry. Work for the same container is serialized so duplicate events cannot run cleanup concurrently.
+If scoped cleanup fails, identity stays for retry. Same-container work serialized via KeyedLock (bounded, timeout).
 
 ## Recovery
 
-The extension records work before performing it. On startup it:
+Records work before doing it. On startup:
 
-- resumes interrupted cleanup;
-- recovers exact creation intents;
-- re-arms inactivity and retry alarms;
-- reconciles externally removed identities;
-- repairs invalid settings to defaults while preserving valid ownership records.
+- Resume interrupted cleanup
+- Recover creation intents (match by expectedName + token)
+- Re-arm inactivity + retry alarms
+- Reconcile externally removed identities
+- Repair invalid settings to defaults, preserve ownership
 
-An unknown storage schema fails closed. Ephemeral does not guess how to interpret container ownership.
+Unknown schema fails closed.
 
-## Resource use
+## Resource Use – Invisible
 
-- No polling or repeating intervals
-- No content scripts or page observers
-- No runtime network requests
-- No runtime dependencies or WebAssembly
-- One inactivity alarm only when enabled for a container
-- At most one retry alarm per failed container and one global recovery alarm
-- Bounded history, retries, locks, timers, errors, and in-memory tab ownership
-- Normal tab-close events query only the affected container
-- Cold background starts use a limited fallback scan only when Firefox no longer exposes the removed tab's container ID
+- No polling, no content scripts, no network, no deps, no WASM
+- One inactivity alarm per container (when enabled), one retry per failed, one global recovery
+- Bounded: history (50 default, 0-500), retries, locks (max 200 keys, auto-prune), timers, tabOwners (500 max, debounced session storage save)
+- Reverse index containerId→Set<tabId> for O(1) forget
+- Tab ownership persisted to storage.session to survive event-page restarts – avoids full scan fallback
+- Badge cached to avoid redundant API calls
+- Logger silent for debug/info, throttled warn (5s)
+- Hotkeys & context menus debounced 350ms
+- getPublicState sequential, not Promise.all burst
+- Background non-persistent, event-driven
 
-Persistent growth is proportional to active containers plus the configured cleanup-history limit. Completed active records are removed.
+Growth proportional to active containers + history limit.
 
-## UI reliability
+## Hotkeys & Automation
 
-Popup and dashboard pages move through `starting`, `ready`, or `error` states. Background requests have a fixed timeout and visible retry controls. Local storage and permission events trigger a short combined refresh; listeners and timers are removed when the page closes.
+**Manifest commands:**
+- `open-ephemeral-tab` Ctrl+Shift+E
+- `open-ephemeral-space` Ctrl+Shift+U
+- `_execute_action` Ctrl+Shift+Period (popup)
 
-The build verifies every HTML and manifest resource. Production packages reject missing or empty files, path escapes, test files, source maps, and WebAssembly.
+**Background:** `commands.onCommand` + `menus.onClicked` (link/page context) both debounced, call `createContainerWithUrl` with sanitized URL (http/https/about:blank/about:newtab only, strips creds, 2048 cap).
+
+**Context menus:** `menus` permission, 3 items (link tab/space, page tab) created onInstalled, onStartup, init.
+
+## UI Reliability
+
+Popup/dashboard have `booting|ready|error` states, 10s request timeout, retry controls. Storage/permission changes trigger debounced 120ms refresh. Listeners removed on pagehide. Build verifies all HTML/manifest resources, rejects empty files, path escapes, test files, sourcemaps, WASM.
+
+## Onboarding
+
+New file `src/onboarding/` – 4 steps, plain language, theme-able via `ui.css` variables (light/dark via prefers-color-scheme). Triggered on `runtime.onInstalled` reason install if `onboardingCompleted` not set. Stores flag in storage.local. Includes hotkey demos, cleanup visual, final actions to try ephemeral tab or open dashboard, keyboard navigation (arrows, Enter, Escape).
 
 ## Tests
 
-The test suite covers:
+- Unit: policy, validation, defaults, errors, keyed-lock, scheduler, state-repo, firefox-adapter, ui-client
+- Integration: controller lifecycle, recovery, message-router, ui-reliability
+- Stress: 1000 sequential sessions bounded
+- E2E: real Firefox cookies, localStorage, IndexedDB, isolation, last-tab cleanup
+- Bench: policy hot paths
+- Coverage thresholds: lines 80, funcs 80, stmts 80, branches 70
 
-- policy and settings validation;
-- creation, cleanup, retry, and restart recovery;
-- last-tab races and concurrent containers;
-- native container New Tab creation;
-- malformed state recovery;
-- popup and dashboard startup;
-- 1,000 sequential disposable sessions with bounded state;
-- real Firefox cookies, local storage, IndexedDB, container isolation, and last-tab cleanup;
-- production package structure and permissions.
+Local checks: `npm run check` (format, lint, typecheck, docs:check, secrets:audit, test, extension:lint)
 
-Run all local checks:
+## Firefox Limits
 
-```sh
-npm ci
-npm run check
-npm run coverage
-npm run bench
-npm run test:e2e:prepare
-FIREFOX_BIN=/path/to/firefox npm run test:e2e
-```
+Container-scoped via `cookieStoreId`: cookies, indexedDB, localStorage, cacheStorage, serviceWorkers (now all attempted). Download history filterable if optional permission granted.
 
-## Firefox limits
+Not safely container-scoped: history, HTTP cache, passwords, permissions, HSTS, TLS, DNS, downloaded files, bookmarks. Ephemeral never deletes global data as substitute.
 
-Firefox can safely target cookies, IndexedDB, local storage, and session storage by container ID. Download-history entries can also be filtered by container ID when the optional permission is granted.
-
-Firefox does not provide safe container-scoped removal for browsing history, browser cache, Cache Storage, service workers, saved passwords, form history, site permissions, HSTS, TLS sessions, DNS state, bookmarks, or downloaded files. Ephemeral does not remove those categories globally.
-
-Browser-exit cleanup runs on the next Firefox startup because extensions cannot block browser shutdown until asynchronous cleanup finishes.
+Browser-exit cleanup runs on next startup (extensions cannot block shutdown).
