@@ -12,6 +12,7 @@ const requiredPermissions = new Set([
   "contextualIdentities",
   "cookies",
   "storage",
+  "menus",
 ]);
 const errors = [];
 if (manifest.manifest_version !== 3) errors.push("manifest_version must be 3");

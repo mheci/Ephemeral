@@ -28,13 +28,43 @@ function report(task: Promise<unknown>, event: string): void {
   });
 }
 
+function createContextMenus(): void {
+  // Best-effort: menus permission may be missing in tests, ignore errors
+  try {
+    // Remove existing to avoid duplicates on re-creation after restart
+    void browser.menus.removeAll().then(() => {
+      // Link context: open link URL in isolated ephemeral container
+      browser.menus.create({
+        id: "open-link-ephemeral-tab",
+        title: "Open link in new ephemeral tab",
+        contexts: ["link"],
+      });
+      browser.menus.create({
+        id: "open-link-ephemeral-space",
+        title: "Open link in new ephemeral space",
+        contexts: ["link"],
+      });
+      // Page context: open current page in ephemeral
+      browser.menus.create({
+        id: "open-page-ephemeral-tab",
+        title: "Open this page in new ephemeral tab",
+        contexts: ["page"],
+      });
+    });
+  } catch {
+    // Ignore – menus API may be unavailable in some environments
+  }
+}
+
 // Register synchronously so Firefox MV3 event-page wake-up can discover every listener.
-browser.runtime.onStartup.addListener(() =>
-  report(controller.onBrowserStartup(), "startup"),
-);
-browser.runtime.onInstalled.addListener(() =>
-  report(controller.initialize(), "installed"),
-);
+browser.runtime.onStartup.addListener(() => {
+  report(controller.onBrowserStartup(), "startup");
+  createContextMenus();
+});
+browser.runtime.onInstalled.addListener(() => {
+  report(controller.initialize(), "installed");
+  createContextMenus();
+});
 browser.tabs.onCreated.addListener((tab) => {
   if (tab.id === undefined) return;
   const value: BrowserTab = {
@@ -78,8 +108,35 @@ if (browser.commands?.onCommand) {
         "command-open-ephemeral-space",
       );
     }
-    // _execute_action is handled by Firefox opening the popup, no need to handle here
+    // _execute_action is handled by Firefox opening the popup
+  });
+}
+
+// Context menu – more automated, right-click any link
+if (browser.menus?.onClicked) {
+  browser.menus.onClicked.addListener((info) => {
+    // Debounce same as hotkeys
+    const commandId = info.menuItemId as string;
+    if (!shouldHandleCommand(`menu-${commandId}`)) return;
+
+    if (info.menuItemId === "open-link-ephemeral-tab" && info.linkUrl) {
+      report(
+        controller.createContainerWithUrl("one-time", info.linkUrl, true),
+        "menu-open-link-ephemeral-tab",
+      );
+    } else if (info.menuItemId === "open-link-ephemeral-space" && info.linkUrl) {
+      report(
+        controller.createContainerWithUrl("reusable", info.linkUrl, true),
+        "menu-open-link-ephemeral-space",
+      );
+    } else if (info.menuItemId === "open-page-ephemeral-tab" && info.pageUrl) {
+      report(
+        controller.createContainerWithUrl("one-time", info.pageUrl, true),
+        "menu-open-page-ephemeral-tab",
+      );
+    }
   });
 }
 
 report(controller.initialize(), "initialization");
+createContextMenus();
