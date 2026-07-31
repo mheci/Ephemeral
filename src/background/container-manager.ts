@@ -51,6 +51,16 @@ export class ContainerManager {
     browserSessionId: string,
     openTab: boolean,
   ): Promise<ContainerRecord> {
+    const state = await this.repository.snapshot();
+    return this.createWithUrl(kind, browserSessionId, state.settings.startUrl, openTab);
+  }
+
+  public async createWithUrl(
+    kind: ContainerKind,
+    browserSessionId: string,
+    url: string,
+    openTab: boolean,
+  ): Promise<ContainerRecord> {
     const [state, capabilities] = await Promise.all([
       this.repository.snapshot(),
       this.getCapabilities(),
@@ -125,7 +135,7 @@ export class ContainerManager {
 
     if (openTab) {
       try {
-        await this.adapter.createTab(record.cookieStoreId, state.settings.startUrl);
+        await this.adapter.createTab(record.cookieStoreId, url);
       } catch (error) {
         const message = `Container created, but Firefox could not open its tab: ${errorMessage(error)}`;
         await this.repository.transaction((draft) => {
@@ -152,6 +162,21 @@ export class ContainerManager {
       record.cookieStoreId,
       state.settings.startUrl,
     );
+    await this.touch(containerId);
+    return tabId;
+  }
+
+  public async openTabWithUrl(containerId: string, url: string): Promise<number> {
+    const state = await this.repository.snapshot();
+    const record = state.containers[containerId];
+    if (!record) throw new EphemeralError("Container not found", "NOT_FOUND");
+    if (record.status !== "active") {
+      throw new EphemeralError(
+        "Container is being cleaned and cannot open a tab",
+        "NOT_ACTIVE",
+      );
+    }
+    const tabId = await this.adapter.createTab(record.cookieStoreId, url);
     await this.touch(containerId);
     return tabId;
   }

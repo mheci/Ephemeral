@@ -18,7 +18,8 @@
     "browsingData",
     "contextualIdentities",
     "cookies",
-    "storage"
+    "storage",
+    "menus"
   ],
   "optional_permissions": ["downloads"],
   "background": {

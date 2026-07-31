@@ -289,9 +289,30 @@ export class Controller {
     await this.updateBadge();
   }
 
+  public async createContainerWithUrl(
+    kind: "one-time" | "reusable",
+    url: string,
+    openTab: boolean,
+  ): Promise<void> {
+    await this.initialize();
+    // Validate URL to avoid opening dangerous schemes
+    const sanitized = this.sanitizeUrl(url);
+    await this.lifecycleLock.run("create", async () => {
+      await this.manager.createWithUrl(kind, this.browserSessionId, sanitized, openTab);
+    });
+    await this.updateBadge();
+  }
+
   public async openTab(containerId: string): Promise<void> {
     await this.initialize();
     const tabId = await this.manager.openTab(containerId);
+    this.trackTab(tabId, containerId);
+  }
+
+  public async openTabWithUrl(containerId: string, url: string): Promise<void> {
+    await this.initialize();
+    const sanitized = this.sanitizeUrl(url);
+    const tabId = await this.manager.openTabWithUrl(containerId, sanitized);
     this.trackTab(tabId, containerId);
   }
 
@@ -432,6 +453,22 @@ export class Controller {
       apiLimitations: [...API_LIMITATIONS],
     };
     return JSON.stringify(diagnostics, null, 2);
+  }
+
+  private sanitizeUrl(url: string): string {
+    if (url === "about:blank" || url === "about:newtab") return url;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        // Strip credentials for safety
+        if (parsed.username !== "" || parsed.password !== "") return "about:blank";
+        if (parsed.href.length > 2048) return "about:blank";
+        return parsed.href;
+      }
+      return "about:blank";
+    } catch {
+      return "about:blank";
+    }
   }
 
   private health(containers: ContainerView[]): HealthView {
