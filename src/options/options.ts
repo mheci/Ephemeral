@@ -251,6 +251,70 @@ function emptyPanel(title: string, detail: string): HTMLElement {
   return panel;
 }
 
+function shortcutRow(name: string, description: string, shortcut: string): HTMLElement {
+  const row = node("div", { className: "shortcut-row" });
+  const copy = node("div");
+  copy.append(node("strong", { text: name }), node("small", { text: description }));
+  const key = node("span", {
+    className: `shortcut-key ${shortcut ? "" : "empty"}`,
+    text: shortcut || "Not set",
+    attrs: { title: shortcut ? `Current: ${shortcut}` : "No shortcut assigned" },
+  });
+  row.append(copy, key);
+  return row;
+}
+
+async function renderShortcuts(): Promise<void> {
+  const list = element<HTMLElement>("#shortcuts-list");
+  clear(list);
+  try {
+    const commands = await browser.commands.getAll();
+    // Sort for stable display: popup first, then our custom commands
+    const order: Record<string, number> = {
+      _execute_action: 0,
+      "open-ephemeral-tab": 1,
+      "open-ephemeral-space": 2,
+    };
+    commands.sort((a, b) => (order[a.name ?? ""] ?? 99) - (order[b.name ?? ""] ?? 99));
+
+    const descriptions: Record<string, string> = {
+      _execute_action: "Open popup – quick access to new tabs and cleanup",
+      "open-ephemeral-tab":
+        "New ephemeral tab – isolated, auto-cleans on close (recommended: Ctrl+Shift+E)",
+      "open-ephemeral-space":
+        "New ephemeral space – stays open for multiple tabs, cleans on demand (Ctrl+Shift+U)",
+    };
+
+    for (const cmd of commands) {
+      const cmdName = cmd.name ?? "";
+      const friendlyName =
+        cmdName === "_execute_action"
+          ? "Open Ephemeral popup"
+          : cmdName === "open-ephemeral-tab"
+            ? "New ephemeral tab"
+            : cmdName === "open-ephemeral-space"
+              ? "New ephemeral space"
+              : cmdName;
+      const desc = descriptions[cmdName] ?? cmd.description ?? "";
+      list.append(shortcutRow(friendlyName, desc, cmd.shortcut ?? ""));
+    }
+
+    if (commands.length === 0) {
+      list.append(
+        emptyPanel("No shortcuts found", "Firefox did not return any commands."),
+      );
+    }
+  } catch (error) {
+    clear(list);
+    list.append(
+      emptyPanel(
+        "Could not load shortcuts",
+        `Firefox error: ${errorText(error)}. Try refreshing.`,
+      ),
+    );
+  }
+}
+
 function render(state: PublicState): void {
   current = state;
   const health = element<HTMLElement>("#health");
@@ -480,6 +544,25 @@ function bind(): void {
       });
   });
 
+  // Shortcuts – invisible efficiency, one keypress = isolated tab
+  element<HTMLButtonElement>("#open-shortcuts").addEventListener("click", () => {
+    // Firefox does not allow direct opening of about:addons shortcuts page,
+    // so we open about:addons and instruct user. This is the closest we can
+    // get without host permissions, and keeps us local-only.
+    void browser.tabs
+      .create({ url: "about:addons" })
+      .then(() =>
+        notify(
+          "Opened Add-ons Manager. Use the gear icon → Manage Extension Shortcuts to customize.",
+          "success",
+        ),
+      )
+      .catch((error: unknown) => notify(errorText(error), "error"));
+  });
+  element<HTMLButtonElement>("#refresh-shortcuts").addEventListener("click", () => {
+    void renderShortcuts().catch((error: unknown) => notify(errorText(error), "error"));
+  });
+
   browser.storage.onChanged.addListener(scheduleStateRefresh);
   browser.permissions.onAdded.addListener(scheduleStateRefresh);
   browser.permissions.onRemoved.addListener(scheduleStateRefresh);
@@ -493,6 +576,11 @@ function bind(): void {
     },
     { once: true },
   );
+
+  // Initial shortcuts render – independent of main state refresh
+  void renderShortcuts().catch(() => {
+    // Best-effort, dashboard still usable if commands API fails
+  });
 }
 
 window.addEventListener("error", (event) => {

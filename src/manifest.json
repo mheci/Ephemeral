@@ -61,6 +61,20 @@
         "mac": "MacCtrl+Shift+Period"
       },
       "description": "Open Ephemeral"
+    },
+    "open-ephemeral-tab": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "MacCtrl+Shift+E"
+      },
+      "description": "Open new ephemeral tab"
+    },
+    "open-ephemeral-space": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "MacCtrl+Shift+U"
+      },
+      "description": "Open new ephemeral space"
     }
   },
   "content_security_policy": {

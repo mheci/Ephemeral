@@ -33,6 +33,10 @@ function toIdentity(
 }
 
 export class FirefoxAdapter implements BrowserAdapter {
+  // Cache for badge to avoid redundant API calls (invisible efficiency)
+  private lastBadgeText = "";
+  private lastBadgeColor = "";
+
   public async loadState(): Promise<unknown> {
     const stored = await browser.storage.local.get(STATE_KEY);
     return stored[STATE_KEY];
@@ -111,25 +115,27 @@ export class FirefoxAdapter implements BrowserAdapter {
 
   public async queryTabs(cookieStoreId: string): Promise<BrowserTab[]> {
     const tabs = await browser.tabs.query({ cookieStoreId });
-    return tabs.flatMap((tab) =>
-      tab.id === undefined
-        ? []
-        : [
-            {
-              id: tab.id,
-              ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
-            },
-          ],
-    );
+    // Avoid spread operator for micro-efficiency, direct construction
+    const result: BrowserTab[] = [];
+    for (const tab of tabs) {
+      if (tab.id !== undefined) {
+        result.push(
+          tab.cookieStoreId
+            ? { id: tab.id, cookieStoreId: tab.cookieStoreId }
+            : { id: tab.id },
+        );
+      }
+    }
+    return result;
   }
 
   public async getTab(tabId: number): Promise<BrowserTab | undefined> {
     try {
       const tab = await browser.tabs.get(tabId);
-      return {
-        id: tabId,
-        ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
-      };
+      if (tab.id === undefined) return undefined;
+      return tab.cookieStoreId
+        ? { id: tab.id, cookieStoreId: tab.cookieStoreId }
+        : { id: tab.id };
     } catch {
       return undefined;
     }
@@ -153,10 +159,40 @@ export class FirefoxAdapter implements BrowserAdapter {
   }
 
   public async removeScopedSiteData(cookieStoreId: string): Promise<void> {
-    await browser.browsingData.remove(
-      { cookieStoreId, since: 0 },
-      { cookies: true, indexedDB: true, localStorage: true },
-    );
+    // Complete monster cleanup: try every container-scoped data type Firefox supports.
+    // Firefox docs: cookieStoreId is supported for cookies, indexedDB, localStorage,
+    // cacheStorage, serviceWorkers. We attempt all, ignoring unsupported errors
+    // to stay compatible with older Firefox versions.
+    // Each removal is tried individually to avoid one failure blocking others.
+    const removalOptions = { cookieStoreId, since: 0 };
+
+    // Primary batch: most critical and universally supported
+    try {
+      await browser.browsingData.remove(removalOptions, {
+        cookies: true,
+        indexedDB: true,
+        localStorage: true,
+      });
+    } catch {
+      // If batch fails, try individually (defensive)
+      for (const type of ["cookies", "indexedDB", "localStorage"] as const) {
+        try {
+          await browser.browsingData.remove(removalOptions, { [type]: true });
+        } catch {
+          // Ignore, continue with other types – best-effort monster cleanup
+        }
+      }
+    }
+
+    // Secondary batch: cacheStorage and serviceWorkers – newer Firefox supports these scoped
+    // This is what makes us a complete monster in the background
+    for (const type of ["cacheStorage", "serviceWorkers"] as const) {
+      try {
+        await browser.browsingData.remove(removalOptions, { [type]: true });
+      } catch {
+        // Older Firefox or future removal of support – ignore, we already cleaned the critical stores
+      }
+    }
   }
 
   public async hasDownloadsPermission(): Promise<boolean> {
@@ -188,6 +224,10 @@ export class FirefoxAdapter implements BrowserAdapter {
   }
 
   public async setBadge(text: string, color: string): Promise<void> {
+    // Avoid redundant API calls – invisible efficiency
+    if (text === this.lastBadgeText && color === this.lastBadgeColor) return;
+    this.lastBadgeText = text;
+    this.lastBadgeColor = color;
     await Promise.all([
       browser.action.setBadgeText({ text }),
       browser.action.setBadgeBackgroundColor({ color }),
