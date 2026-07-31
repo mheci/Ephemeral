@@ -32,6 +32,7 @@ Only the signed XPI is intended for normal installation. ZIP files are provided 
 ## Use
 
 ### Mouse
+
 1. Select the Ephemeral toolbar button.
 2. Choose **New ephemeral tab** (Ctrl+Shift+E) or **New ephemeral space** (Ctrl+Shift+U).
 3. Browse normally inside the new container.
@@ -39,6 +40,7 @@ Only the signed XPI is intended for normal installation. ZIP files are provided 
 5. Open the dashboard to review active sessions and cleanup results.
 
 ### Keyboard (invisible efficiency)
+
 - **Ctrl+Shift+E** (Mac: MacCtrl+Shift+E): Open new ephemeral tab – isolated, auto-cleans on close. This is the primary, almost invisible way.
 - **Ctrl+Shift+U**: Open new ephemeral space – stays open for multiple tabs.
 - **Ctrl+Shift+Period**: Open Ephemeral popup
