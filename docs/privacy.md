@@ -1,46 +1,40 @@
 # Privacy
 
-Ephemeral does not collect or transmit data. Firefox is told explicitly that the extension collects no data.
+Ephemeral collects zero data. Firefox data_collection_permissions = none.
 
-## Data stored locally
+## Stored Locally (required only)
 
-Ephemeral stores only what is required to manage temporary sessions:
+- Settings, lifecycle policies
+- Active container IDs, creation/cleanup recovery state
+- Timestamps, status, bounded errors
+- Bounded cleanup history (50 default, 0-500, clearable)
+- Tab ownership cache (session storage, 500 max, debounced)
+- Onboarding completed flag
 
-- settings and lifecycle policies;
-- active managed-container identifiers;
-- creation and cleanup recovery state;
-- timestamps, status, and bounded error messages;
-- a bounded cleanup history.
+## Never Stored
 
-Ephemeral does not store:
+- URLs, titles, cookie values, storage contents, page content, search terms, download names, account info
 
-- visited URLs or page titles;
-- cookie values;
-- local-storage or IndexedDB contents;
-- page content or search terms;
-- download names;
-- account or identity information.
-
-The configured start page is stored because it is a user setting.
+Start page stored because it's a setting.
 
 ## Retention
 
-Active records are removed after cleanup. Cleanup history keeps 50 entries by default, can be set from 0 to 500, and can be cleared at any time. Failed records remain visible until cleanup succeeds or the container is removed.
+Active records removed after cleanup. Failed remain until success or removal. History bounded and clearable. Tab ownership session-only.
 
-## Network activity
+## Network
 
-Extension pages cannot make outbound connections. Ephemeral has no server, account, telemetry, analytics, advertising, synchronization service, or remote diagnostics.
+Extension pages: `connect-src 'none'` – cannot make outbound connections. No server, telemetry, analytics, ads, sync, diagnostics.
 
-Websites opened by the user make their normal network requests through Firefox. Those requests are not sent to Ephemeral or its maintainers.
+Websites you open make normal Firefox requests – not sent to extension.
 
 ## Exports
 
-Settings and diagnostics exports are created locally. Nothing is uploaded. Users should review diagnostic files before sharing them because custom names or Firefox error messages may be personally meaningful.
+Settings/diagnostics created locally, nothing uploaded. Review before sharing – custom names or Firefox errors may be personal.
 
-## Optional download permission
+## Downloads Permission
 
-When enabled, Ephemeral uses the download permission only to erase Firefox download-history entries filtered by the temporary container ID. It never deletes downloaded files.
+Optional. Only erases download-history entries filtered by container ID. Never deletes files.
 
-## Uninstalling
+## Uninstall
 
-Use **Clean all** before uninstalling. Firefox does not provide a reliable extension-uninstall event that can complete asynchronous container cleanup.
+Clean all first. Firefox has no reliable uninstall event for async cleanup.

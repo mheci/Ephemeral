@@ -1,31 +1,27 @@
 # Contributing
 
-Ephemeral accepts focused proposals and security reports. Repository ownership and release authority remain with `astarling-x`.
+Efficient, focused PRs only. Repository owned by `mheci`.
 
-## Development setup
+## Setup
 
 ```sh
-git clone https://github.com/astarling-x/Ephemeral.git
+git clone https://github.com/mheci/Ephemeral.git
 cd Ephemeral
 npm ci
 npm run check
 ```
 
-Requirements: Node.js 20.19+, npm 10+, Python 3.11+, Firefox 153+, and geckodriver.
+Requires Node 20.19+, npm 10+, Python 3.11+, Firefox 153+, geckodriver.
 
-## Pull requests
+## PR Requirements
 
-A pull request should:
+- One problem per PR, clear description of behavior and failure handling
+- Tests for regression, preserve cleanup ordering and ownership
+- Update docs/changelog if user-visible
+- Measurements for performance changes
+- No unrelated formatting or deps
 
-- solve one clearly described problem;
-- explain user-visible behavior and failure handling;
-- include regression tests;
-- preserve container ownership and cleanup ordering;
-- update relevant documentation and the changelog;
-- include measurements for resource-sensitive changes;
-- avoid unrelated formatting or dependency changes.
-
-Run before requesting review:
+Pre-review:
 
 ```sh
 npm audit --audit-level=high
@@ -38,25 +34,19 @@ FIREFOX_BIN=/path/to/firefox npm run test:e2e
 npm run package
 ```
 
-## Engineering requirements
+## Engineering Rules
 
-- Keep Firefox API access behind `FirefoxAdapter`.
-- Record state before crossing browser/storage boundaries.
-- Never remove global data to imitate container cleanup.
-- Prefer events and one-shot alarms; do not poll.
-- Keep every retry, timer, listener, lock, history list, and cache bounded.
-- Do not log or persist URLs, cookie values, hostnames, page titles, or page content.
-- Do not add telemetry, remote code, host permissions, or runtime dependencies.
-- Do not commit generated builds, profiles, diagnostics, credentials, signed XPIs, or AMO responses.
+- Firefox APIs only via `FirefoxAdapter`
+- Record state before crossing storage/browser boundaries
+- Never delete global data to fake container cleanup
+- Events + one-shot alarms, no polling
+- All retries, timers, listeners, locks, history, caches bounded
+- Never log/persist URLs, cookies, hostnames, titles, page content
+- No telemetry, remote code, host perms, runtime deps
+- Don't commit builds, profiles, diagnostics, creds, signed XPIs
 
-A new cleanup category requires official Firefox documentation, a cross-container safety test, failure recovery coverage, and a real-Firefox test.
+New cleanup category needs: Firefox docs, cross-container safety test, recovery test, real-Firefox test.
 
-## Automated maintenance
+## Security
 
-Dependabot groups dependency updates. Automated pull requests must pass all required checks and receive owner approval before merge. Release automation uses conventional commit messages to prepare version updates and release notes.
-
-## Security reports
-
-Use the private process in [SECURITY.md](SECURITY.md). Do not open a public issue for a vulnerability.
-
-Contributions are licensed under MPL-2.0.
+Use private process in SECURITY.md, not public issues. Licensed MPL-2.0.

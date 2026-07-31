@@ -56,14 +56,34 @@ function createContextMenus(): void {
   }
 }
 
+function maybeOpenOnboarding(reason: string): void {
+  // Friendly, clear, simple onboarding for fresh installs and new users
+  // Theme-able via ui.css (light/dark via prefers-color-scheme)
+  if (reason !== "install") return;
+  void (async () => {
+    try {
+      const stored = (await browser.storage.local.get(
+        "onboardingCompleted",
+      )) as Record<string, unknown>;
+      if (stored["onboardingCompleted"]) return;
+      await browser.tabs.create({
+        url: browser.runtime.getURL("onboarding/index.html"),
+      });
+    } catch {
+      // Best-effort, ignore if tabs API unavailable
+    }
+  })();
+}
+
 // Register synchronously so Firefox MV3 event-page wake-up can discover every listener.
 browser.runtime.onStartup.addListener(() => {
   report(controller.onBrowserStartup(), "startup");
   createContextMenus();
 });
-browser.runtime.onInstalled.addListener(() => {
+browser.runtime.onInstalled.addListener((details) => {
   report(controller.initialize(), "installed");
   createContextMenus();
+  maybeOpenOnboarding(details.reason);
 });
 browser.tabs.onCreated.addListener((tab) => {
   if (tab.id === undefined) return;
@@ -124,7 +144,10 @@ if (browser.menus?.onClicked) {
         controller.createContainerWithUrl("one-time", info.linkUrl, true),
         "menu-open-link-ephemeral-tab",
       );
-    } else if (info.menuItemId === "open-link-ephemeral-space" && info.linkUrl) {
+    } else if (
+      info.menuItemId === "open-link-ephemeral-space" &&
+      info.linkUrl
+    ) {
       report(
         controller.createContainerWithUrl("reusable", info.linkUrl, true),
         "menu-open-link-ephemeral-space",
