@@ -39,6 +39,7 @@
         <a href="#overview"><span aria-hidden="true">◫</span> Overview</a>
         <a href="#sessions"><span aria-hidden="true">◎</span> Sessions</a>
         <p class="nav-label">Configuration</p>
+        <a href="#shortcuts"><span aria-hidden="true">⌨</span> Shortcuts</a>
         <a href="#defaults"><span aria-hidden="true">⚙</span> Lifecycle defaults</a>
         <a href="#cleanup"><span aria-hidden="true">⌫</span> Cleanup</a>
         <a href="#history"><span aria-hidden="true">≡</span> Records</a>
@@ -249,6 +250,42 @@
                 ></span>
               </div>
             </form>
+          </section>
+
+          <section id="shortcuts" class="dashboard-section">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Invisible efficiency</p>
+                <h2>Keyboard shortcuts</h2>
+                <p class="section-description">
+                  Open ephemeral tabs without touching the mouse. Shortcuts work even
+                  when the popup is closed and feel almost invisible.
+                </p>
+              </div>
+            </div>
+            <div class="panel shortcuts-panel">
+              <div id="shortcuts-list" class="shortcuts-list">
+                <div class="skeleton-row" aria-hidden="true"></div>
+              </div>
+              <div class="callout">
+                <strong>How to change:</strong> Firefox manages all extension shortcuts
+                in one place. Click the button below, then use the gear icon →
+                <em>Manage Extension Shortcuts</em> to set your own keys for Ephemeral.
+              </div>
+              <div class="form-actions">
+                <button id="open-shortcuts" class="button secondary" type="button">
+                  Open Firefox shortcut settings
+                </button>
+                <button id="refresh-shortcuts" class="button secondary" type="button">
+                  Refresh list
+                </button>
+              </div>
+              <p class="permission-status">
+                Tip: Use <code>Ctrl+Shift+E</code> for a new ephemeral tab and
+                <code>Ctrl+Shift+U</code> for a new ephemeral space. Hold the keys
+                briefly – rapid repeats are debounced to avoid container spam.
+              </p>
+            </div>
           </section>
 
           <section id="cleanup" class="dashboard-section">

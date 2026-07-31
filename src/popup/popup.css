@@ -214,6 +214,22 @@
   font-size: 18px;
 }
 
+.shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
 .popup-session-list {
   display: grid;
   gap: 7px;

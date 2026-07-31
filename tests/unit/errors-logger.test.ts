@@ -11,7 +11,7 @@ describe("errors and local logger", () => {
     expect(new EphemeralError("message", "CODE").code).toBe("CODE");
   });
 
-  it("uses only the local console surface", () => {
+  it("uses only the local console surface and stays invisible for debug/info", () => {
     const debug = vi.spyOn(console, "debug").mockImplementation(() => undefined);
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -21,8 +21,9 @@ describe("errors and local logger", () => {
     logger.info("info", { count: 1 });
     logger.warn("warn");
     logger.error("error", new Error("safe"));
-    expect(debug).toHaveBeenCalledOnce();
-    expect(info).toHaveBeenCalledOnce();
+    // Debug/info are no-ops for invisibility and resource efficiency
+    expect(debug).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledOnce();
     expect(error).toHaveBeenCalledWith("[test]", "error", { error: "safe" });
   });

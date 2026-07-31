@@ -21,6 +21,12 @@ import { Logger } from "./logger";
 import { Scheduler } from "./scheduler";
 import { StateRepository } from "./state-repository";
 
+/**
+ * Resource-efficient tab ownership tracking.
+ * We keep both forward (tabId -> containerId) and reverse (containerId -> Set<tabId>) maps
+ * for O(1) cleanup, and persist to browser.storage.session to survive event page restarts
+ * without needing a full scan of all managed containers (invisible to user).
+ */
 export class Controller {
   private readonly repository: StateRepository;
   private readonly scheduler: Scheduler;
@@ -28,10 +34,12 @@ export class Controller {
   private readonly cleanup: CleanupEngine;
   private readonly logger = new Logger();
   private readonly lifecycleLock = new KeyedLock();
-  /** Hot-path hint only; correctness falls back to a bounded managed-container scan. */
+  /** Hot-path hint with reverse index for O(1) forget – persisted to session storage */
   private readonly tabOwners = new Map<number, string>();
+  private readonly containerTabs = new Map<string, Set<number>>();
   private ready: Promise<void> | undefined;
   private browserSessionId = "";
+  private pendingTabOwnersSave: number | undefined;
 
   public constructor(
     private readonly adapter: BrowserAdapter,
@@ -64,6 +72,7 @@ export class Controller {
 
   private async initializeOnce(): Promise<void> {
     await this.repository.initialize();
+    await this.loadTabOwners();
     this.browserSessionId =
       (await this.adapter.getBrowserSessionId()) ?? randomId("session");
     await this.adapter.setBrowserSessionId(this.browserSessionId);
@@ -112,11 +121,89 @@ export class Controller {
     await this.updateBadge();
   }
 
+  // --- Tab ownership persistence (invisible efficiency) ---
+
+  private async loadTabOwners(): Promise<void> {
+    try {
+      const stored = (await browser.storage.session.get("tabOwners")) as Record<
+        string,
+        unknown
+      >;
+      const raw = stored["tabOwners"];
+      if (!Array.isArray(raw)) return;
+      for (const entry of raw) {
+        if (
+          Array.isArray(entry) &&
+          entry.length === 2 &&
+          typeof entry[0] === "number" &&
+          typeof entry[1] === "string"
+        ) {
+          const tabId = entry[0];
+          const containerId = entry[1];
+          this.tabOwners.set(tabId, containerId);
+          const set = this.containerTabs.get(containerId) ?? new Set<number>();
+          set.add(tabId);
+          this.containerTabs.set(containerId, set);
+        }
+      }
+    } catch {
+      // Session storage may be unavailable – fallback to empty, will use bounded scan
+      this.tabOwners.clear();
+      this.containerTabs.clear();
+    }
+  }
+
+  private scheduleTabOwnersSave(): void {
+    if (this.pendingTabOwnersSave !== undefined) return;
+    // Debounce save to avoid hammering storage on rapid tab events
+    // Use globalThis for compatibility with both browser and Vitest Node env
+    this.pendingTabOwnersSave = globalThis.setTimeout(() => {
+      this.pendingTabOwnersSave = undefined;
+      void this.saveTabOwners();
+    }, 500);
+  }
+
+  private async saveTabOwners(): Promise<void> {
+    try {
+      const entries: Array<[number, string]> = [...this.tabOwners.entries()];
+      // Bounded: only keep up to 500 most recent entries to avoid unbounded growth
+      const bounded = entries.slice(-500);
+      await browser.storage.session.set({ tabOwners: bounded });
+    } catch {
+      // Best-effort – if session storage fails, we still have in-memory map
+    }
+  }
+
+  private trackTab(tabId: number, containerId: string): void {
+    // Update forward map
+    this.tabOwners.set(tabId, containerId);
+    // Update reverse map
+    const set = this.containerTabs.get(containerId) ?? new Set<number>();
+    set.add(tabId);
+    this.containerTabs.set(containerId, set);
+    this.scheduleTabOwnersSave();
+  }
+
+  private untrackTab(tabId: number): string | undefined {
+    const containerId = this.tabOwners.get(tabId);
+    if (containerId === undefined) return undefined;
+    this.tabOwners.delete(tabId);
+    const set = this.containerTabs.get(containerId);
+    if (set) {
+      set.delete(tabId);
+      if (set.size === 0) this.containerTabs.delete(containerId);
+    }
+    this.scheduleTabOwnersSave();
+    return containerId;
+  }
+
+  // --- Event handlers ---
+
   public async onTabActivity(tab: BrowserTab): Promise<void> {
     await this.initialize();
     if (!tab.cookieStoreId) return;
     const containerId = await this.manager.touchByCookieStore(tab.cookieStoreId);
-    if (containerId) this.tabOwners.set(tab.id, containerId);
+    if (containerId) this.trackTab(tab.id, containerId);
   }
 
   public async onTabActivated(tabId: number): Promise<void> {
@@ -127,8 +214,7 @@ export class Controller {
 
   public async onTabRemoved(tabId: number): Promise<void> {
     await this.initialize();
-    const knownContainerId = this.tabOwners.get(tabId);
-    this.tabOwners.delete(tabId);
+    const knownContainerId = this.untrackTab(tabId);
     await this.lifecycleLock.run("last-tab-scan", async () => {
       const state = await this.repository.snapshot();
       if (knownContainerId) {
@@ -141,9 +227,9 @@ export class Controller {
         return;
       }
 
-      // A non-persistent event page can wake after Firefox has already removed
-      // the tab, leaving no supported API to recover its cookieStoreId. Scan
-      // only last-tab-enabled managed records in this cold-start case.
+      // Cold-start fallback: event page woke after Firefox already removed
+      // the tab, so we have no cookieStoreId. Only scan containers that
+      // actually need last-tab cleanup (bounded, not all containers).
       for (const record of Object.values(state.containers)) {
         if (record.status !== "active" || !record.policy.destroyOnLastTabClose)
           continue;
@@ -206,7 +292,7 @@ export class Controller {
   public async openTab(containerId: string): Promise<void> {
     await this.initialize();
     const tabId = await this.manager.openTab(containerId);
-    this.tabOwners.set(tabId, containerId);
+    this.trackTab(tabId, containerId);
   }
 
   public async cleanupContainer(
@@ -276,27 +362,26 @@ export class Controller {
   public async getPublicState(): Promise<PublicState> {
     await this.initialize();
     const state = await this.repository.snapshot();
-    const containers: ContainerView[] = await Promise.all(
-      Object.values(state.containers).map(async (record) => {
-        let tabCount = 0;
-        try {
-          tabCount = (await this.adapter.queryTabs(record.cookieStoreId)).length;
-        } catch (error) {
-          // Dashboard visibility is diagnostic and must survive a transient tabs
-          // query failure. Destructive cleanup paths continue to fail closed.
-          this.logger.warn("Could not count tabs for dashboard", {
-            containerId: record.id,
-            error: error instanceof Error ? error.message.slice(0, 120) : "unknown",
-          });
-        }
-        const deadline = inactivityDeadline(record.lastActivityAt, record.policy);
-        return {
-          ...record,
-          tabCount,
-          ...(deadline === undefined ? {} : { expiresAt: deadline }),
-        };
-      }),
-    );
+    // Query tabs for each container – accurate count even if initial tab wasn't tracked via tabOwners
+    // We run sequentially to avoid bursting Firefox with many parallel queries (resource efficient)
+    const containers: ContainerView[] = [];
+    for (const record of Object.values(state.containers)) {
+      let tabCount = 0;
+      try {
+        tabCount = (await this.adapter.queryTabs(record.cookieStoreId)).length;
+      } catch (error) {
+        this.logger.warn("Could not count tabs for dashboard", {
+          containerId: record.id,
+          error: error instanceof Error ? error.message.slice(0, 120) : "unknown",
+        });
+      }
+      const deadline = inactivityDeadline(record.lastActivityAt, record.policy);
+      containers.push({
+        ...record,
+        tabCount,
+        ...(deadline === undefined ? {} : { expiresAt: deadline }),
+      });
+    }
     containers.sort((left, right) => left.createdAt - right.createdAt);
     const capabilities = await this.manager.getCapabilities();
     let downloadsPermission = false;
@@ -382,8 +467,12 @@ export class Controller {
   }
 
   private forgetContainerTabs(containerId: string): void {
-    for (const [tabId, ownerId] of this.tabOwners) {
-      if (ownerId === containerId) this.tabOwners.delete(tabId);
+    // O(1) via reverse index instead of scanning entire forward map
+    const tabIds = this.containerTabs.get(containerId);
+    if (tabIds) {
+      for (const tabId of tabIds) this.tabOwners.delete(tabId);
+      this.containerTabs.delete(containerId);
+      this.scheduleTabOwnersSave();
     }
   }
 
@@ -401,8 +490,6 @@ export class Controller {
         await this.adapter.setBadge(String(records.length), "#087f8c");
       else await this.adapter.setBadge("", "#087f8c");
     } catch (error) {
-      // Toolbar decoration is best-effort and must never prevent lifecycle or UI
-      // initialization from completing.
       this.logger.warn("Could not update toolbar badge", {
         error: error instanceof Error ? error.message.slice(0, 120) : "unknown",
       });
