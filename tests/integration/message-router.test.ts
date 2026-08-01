@@ -107,6 +107,24 @@ describe("MessageRouter", () => {
     expect(await router.handle({ type: "CLEANUP_ALL" }, sender)).toEqual({ ok: true });
   });
 
+  it("routes CREATE_WINDOW through to the controller", async () => {
+    const adapter = new MockAdapter();
+    const router = new MessageRouter(new Controller(adapter, () => 1_700_000_000_000));
+    expect(
+      await router.handle({ type: "CREATE_WINDOW", kind: "one-time" }, sender),
+    ).toEqual({ ok: true });
+    expect(adapter.windowCreates).toHaveLength(1);
+    const created = adapter.windowCreates[0]!;
+    expect(created.url).toBe("about:blank");
+    expect(
+      await router.handle(
+        { type: "CREATE_WINDOW", kind: "one-time", url: "https://example.com/" },
+        sender,
+      ),
+    ).toEqual({ ok: true });
+    expect(adapter.windowCreates[1]?.url).toBe("https://example.com/");
+  });
+
   it("converts controller exceptions into bounded error responses", async () => {
     const router = new MessageRouter(new Controller(new MockAdapter()));
     await expect(

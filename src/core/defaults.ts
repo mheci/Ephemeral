@@ -40,7 +40,7 @@ export function createInitialState(): PersistedState {
 
 export const API_LIMITATIONS = Object.freeze([
   "Firefox exposes no container-scoped API for browsing history; Ephemeral never deletes global history.",
-  "HTTP cache, Cache Storage, and service-worker registrations cannot be safely targeted by cookieStoreId.",
+  "The HTTP cache is global and has no container-scoped removal API; Ephemeral never deletes the global cache.",
   "Saved passwords, form history, site permissions, HSTS, TLS state, DNS state, and physical download files are not container-scoped WebExtension data.",
   "A WebExtension cannot guarantee work during Firefox shutdown; browser-exit cleanup runs on the next Firefox startup.",
   "Firefox acknowledges IndexedDB/local-storage removal but does not expose a byte-level verification API.",

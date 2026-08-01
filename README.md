@@ -10,13 +10,15 @@ Ephemeral creates temporary Firefox containers – isolated spaces for browsing.
 
 **What it does:** Gives you disposable tabs. Each tab lives alone, can't see your other tabs, and self-destructs when closed.
 
-**How it functions:** 
+**How it functions:**
+
 1. Press `Ctrl+Shift+E` → new isolated tab opens
 2. Browse normally
 3. Close the tab → Firefox erases cookies, storage, cache for that container
 4. Nothing left behind
 
 **How it behaves:**
+
 - Isolated: Each ephemeral tab can't access your normal tabs
 - Automatic: Cleans on last-tab close, browser restart, or inactivity
 - Invisible: No telemetry, no network, no tracking – runs entirely on your device
@@ -34,30 +36,33 @@ Firefox 153+ required.
 ## Use
 
 **Keyboard (fastest, invisible):**
+
 - `Ctrl+Shift+E` / `MacCtrl+Shift+E` – New ephemeral tab (auto-cleans)
 - `Ctrl+Shift+U` – New ephemeral space (stays open for many tabs)
+- Assignable – New ephemeral window (dedicated window, cleans when closed)
 - `Ctrl+Shift+Period` – Open popup
 
 Change shortcuts: Add-ons Manager → Gear → Manage Extension Shortcuts
 
 **Mouse:**
-- Toolbar button → New ephemeral tab / space
-- Right-click link → Open link in new ephemeral tab
-- Right-click page → Open this page in new ephemeral tab
 
-**Cleanup triggers:** Last tab closed, browser restart, inactivity timeout, manual Clean button, or context menu.
+- Toolbar button → New ephemeral tab / space / window
+- Right-click link → Open link in new ephemeral tab / window
+- Right-click page → Open this page in new ephemeral tab / window
+
+**Cleanup triggers:** Last tab closed, window closed, browser restart, inactivity timeout, manual Clean button, or context menu.
 
 ## What Gets Erased
 
-| Data | Result |
-|------|--------|
-| Cookies, IndexedDB, local/session storage | Removed for that container |
-| Cache Storage, Service Workers | Removed (new) |
-| Tabs & container identity | Closed & removed |
-| Download history | Optional, files stay on disk |
-| Extension state | Removed after cleanup |
+| Data                                      | Result                       |
+| ----------------------------------------- | ---------------------------- |
+| Cookies, IndexedDB, local/session storage | Removed for that container   |
+| Cache Storage, Service Workers            | Removed for that container   |
+| Tabs & container identity                 | Closed & removed             |
+| Download history                          | Optional, files stay on disk |
+| Extension state                           | Removed after cleanup        |
 
-Firefox does NOT allow container-scoped removal of history, HTTP cache, passwords, permissions – we never delete global data as substitute.
+Container-scoped removal works for cookies, IndexedDB, local/session storage, cache storage, and service workers – each attempted individually and reported honestly when Firefox rejects a type. Firefox does NOT allow container-scoped removal of history, HTTP cache, passwords, form data, permissions, HSTS/TLS state, DNS, or download history – we never delete global data as substitute.
 
 ## Privacy
 

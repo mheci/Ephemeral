@@ -3,6 +3,7 @@ import type {
   BrowserIdentity,
   BrowserTab,
   DownloadEraseResult,
+  SiteDataRemoval,
 } from "./browser-adapter";
 
 const STATE_KEY = "ephemeralState";
@@ -154,17 +155,34 @@ export class FirefoxAdapter implements BrowserAdapter {
     return tab.id;
   }
 
+  public async createWindow(cookieStoreId: string, url: string): Promise<number> {
+    // A dedicated browser window whose tabs all belong to the container.
+    // The same about:newtab special case applies as for tabs.create.
+    const window = await browser.windows.create(
+      url === "about:newtab"
+        ? { cookieStoreId, focused: true }
+        : { cookieStoreId, url, focused: true },
+    );
+    const tab = window.tabs?.[0];
+    if (tab?.id === undefined) {
+      throw new Error("Firefox created a window without a tab ID");
+    }
+    return tab.id;
+  }
+
   public async closeTabs(tabIds: number[]): Promise<void> {
     if (tabIds.length > 0) await browser.tabs.remove(tabIds);
   }
 
-  public async removeScopedSiteData(cookieStoreId: string): Promise<void> {
-    // Complete monster cleanup: try every container-scoped data type Firefox supports.
-    // Firefox docs: cookieStoreId is supported for cookies, indexedDB, localStorage,
-    // cacheStorage, serviceWorkers. We attempt all, ignoring unsupported errors
-    // to stay compatible with older Firefox versions.
-    // Each removal is tried individually to avoid one failure blocking others.
+  public async removeScopedSiteData(cookieStoreId: string): Promise<SiteDataRemoval> {
+    // Container-scoped data removal: Firefox supports cookieStoreId for
+    // cookies, indexedDB, localStorage, cacheStorage, and serviceWorkers.
+    // Each type is attempted individually (with one batch shortcut for the
+    // core trio) and the result is reported per type so cleanup history can
+    // be honest about what Firefox actually accepted.
     const removalOptions = { cookieStoreId, since: 0 };
+    const acknowledgedTypes: string[] = [];
+    const failedTypes: string[] = [];
 
     // Primary batch: most critical and universally supported
     try {
@@ -173,26 +191,30 @@ export class FirefoxAdapter implements BrowserAdapter {
         indexedDB: true,
         localStorage: true,
       });
+      acknowledgedTypes.push("cookies", "indexedDB", "localStorage");
     } catch {
-      // If batch fails, try individually (defensive)
       for (const type of ["cookies", "indexedDB", "localStorage"] as const) {
         try {
           await browser.browsingData.remove(removalOptions, { [type]: true });
+          acknowledgedTypes.push(type);
         } catch {
-          // Ignore, continue with other types – best-effort monster cleanup
+          failedTypes.push(type);
         }
       }
     }
 
-    // Secondary batch: cacheStorage and serviceWorkers – newer Firefox supports these scoped
-    // This is what makes us a complete monster in the background
+    // Secondary: cacheStorage and serviceWorkers – newer Firefox supports
+    // these scoped; older versions reject them and that is reported.
     for (const type of ["cacheStorage", "serviceWorkers"] as const) {
       try {
         await browser.browsingData.remove(removalOptions, { [type]: true });
+        acknowledgedTypes.push(type);
       } catch {
-        // Older Firefox or future removal of support – ignore, we already cleaned the critical stores
+        failedTypes.push(type);
       }
     }
+
+    return { acknowledgedTypes, failedTypes };
   }
 
   public async hasDownloadsPermission(): Promise<boolean> {

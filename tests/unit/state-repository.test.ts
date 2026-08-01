@@ -12,13 +12,40 @@ describe("StateRepository", () => {
     expect(adapter.stored).toEqual(state);
   });
 
-  it("fails closed on an unsupported schema instead of forgetting ownership", async () => {
+  it("salvages parseable ownership records from an unsupported schema", async () => {
     const adapter = new MockAdapter();
-    adapter.stored = { schemaVersion: 999, containers: { dangerous: {} } };
-    const repository = new StateRepository(adapter);
-    await expect(repository.initialize()).rejects.toThrow(
-      /Unsupported persisted state schema/,
+    const validRecord = {
+      id: "container-1",
+      operationToken: "ABC234",
+      cookieStoreId: "firefox-container-1",
+      name: "Ephemeral · ABC234",
+      kind: "reusable",
+      color: "blue",
+      icon: "circle",
+      createdAt: 1,
+      lastActivityAt: 1,
+      createdBrowserSessionId: "session-1",
+      policy: createInitialState().settings.reusablePolicy,
+      status: "active",
+      cleanupAttempts: 0,
+    };
+    adapter.stored = {
+      schemaVersion: 999,
+      revision: 42,
+      settings: { not: "usable" },
+      containers: { "container-1": validRecord, broken: { id: "broken" } },
+      creationIntents: {},
+      cleanupHistory: [{ id: "broken" }],
+    };
+    const recovered = await new StateRepository(adapter).initialize();
+    expect(recovered.schemaVersion).toBe(1);
+    expect(recovered.revision).toBe(0);
+    expect(recovered.containers["container-1"]?.cookieStoreId).toBe(
+      "firefox-container-1",
     );
+    expect(recovered.containers["broken"]).toBeUndefined();
+    expect(recovered.settings.containerNamePrefix).toBe("Ephemeral");
+    expect((adapter.stored as typeof recovered).schemaVersion).toBe(1);
   });
 
   it("repairs invalid settings while preserving valid managed records", async () => {

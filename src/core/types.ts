@@ -172,6 +172,7 @@ export type DiagnosticsExport = {
 export type RequestMessage =
   | { type: "GET_STATE" }
   | { type: "CREATE_CONTAINER"; kind: ContainerKind; openTab: boolean }
+  | { type: "CREATE_WINDOW"; kind: ContainerKind; url?: string }
   | { type: "OPEN_TAB"; containerId: string }
   | { type: "CLEANUP_CONTAINER"; containerId: string }
   | { type: "CLEANUP_ALL" }
