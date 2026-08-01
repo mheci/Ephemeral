@@ -54,6 +54,35 @@ describe("settings validation", () => {
     expect(() => validateSettings(settings)).toThrow(/maxAttempts/);
   });
 
+  it("defaults a missing grace period to zero and bounds its range", () => {
+    const settings = createDefaultSettings();
+    const legacy = { ...settings.oneTimePolicy };
+    delete (legacy as { graceSeconds?: number }).graceSeconds;
+    expect(
+      validateSettings({ ...settings, oneTimePolicy: legacy }).oneTimePolicy,
+    ).toMatchObject({
+      destroyOnLastTabClose: true,
+      graceSeconds: 0,
+    });
+
+    const overRange = createDefaultSettings();
+    overRange.reusablePolicy.graceSeconds = 601;
+    expect(() => validateSettings(overRange)).toThrow(/0 to 600/);
+
+    const fractional = createDefaultSettings();
+    fractional.reusablePolicy.graceSeconds = 1.5;
+    expect(() => validateSettings(fractional)).toThrow(/integer/);
+  });
+
+  it("round-trips an explicit grace period", () => {
+    const settings = createDefaultSettings();
+    settings.oneTimePolicy.graceSeconds = 30;
+    const exported = createSettingsExport(settings, 0);
+    expect(
+      parseSettingsExport(JSON.stringify(exported)).oneTimePolicy.graceSeconds,
+    ).toBe(30);
+  });
+
   it.each([
     null,
     {},

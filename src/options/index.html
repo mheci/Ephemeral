@@ -122,6 +122,27 @@
                   <strong id="metric-downloads">—</strong><span>Download cleanup</span>
                 </div>
               </article>
+              <article class="metric-card lifetime-card">
+                <span class="metric-icon" aria-hidden="true">∞</span>
+                <div>
+                  <strong id="metric-lifetime-sessions">—</strong
+                  ><span>Sessions cleaned (lifetime)</span>
+                </div>
+              </article>
+              <article class="metric-card lifetime-card">
+                <span class="metric-icon" aria-hidden="true">▣</span>
+                <div>
+                  <strong id="metric-lifetime-tabs">—</strong
+                  ><span>Tabs closed (lifetime)</span>
+                </div>
+              </article>
+              <article class="metric-card lifetime-card">
+                <span class="metric-icon" aria-hidden="true">●</span>
+                <div>
+                  <strong id="metric-lifetime-data">—</strong
+                  ><span>Data types erased (lifetime)</span>
+                </div>
+              </article>
             </div>
           </section>
 
@@ -206,6 +227,13 @@
                     ><span>Timeout in minutes</span
                     ><input id="once-minutes" type="number" min="1" max="10080"
                   /></label>
+                  <label class="field inline"
+                    ><span>Undo-close grace (seconds)</span
+                    ><input id="once-grace" type="number" min="0" max="600" /><small
+                      >0 = clean instantly. Higher = time to reopen the tab after the
+                      last one closes.</small
+                    ></label
+                  >
                 </fieldset>
                 <fieldset class="panel policy-card">
                   <legend>
@@ -238,6 +266,13 @@
                     ><span>Timeout in minutes</span
                     ><input id="reuse-minutes" type="number" min="1" max="10080"
                   /></label>
+                  <label class="field inline"
+                    ><span>Undo-close grace (seconds)</span
+                    ><input id="reuse-grace" type="number" min="0" max="600" /><small
+                      >0 = clean instantly. Higher = time to reopen the tab after the
+                      last one closes.</small
+                    ></label
+                  >
                 </fieldset>
               </div>
               <div class="form-actions">

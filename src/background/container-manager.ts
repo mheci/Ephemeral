@@ -165,6 +165,7 @@ export class ContainerManager {
     await this.repository.transaction((draft) => {
       draft.containers[id] = record;
       delete draft.creationIntents[id];
+      draft.lifetimeStats.containersCreated += 1;
     });
     await this.scheduler.scheduleInactivity(record);
 
@@ -234,10 +235,15 @@ export class ContainerManager {
       const record = draft.containers[containerId];
       if (record?.status !== "active") return;
       record.lastActivityAt = this.now();
+      // Any tab activity ends a drain window: the container is in use again.
+      delete record.drainDeadline;
       delete record.lastError;
       updated = structuredClone(record);
     });
-    if (updated) await this.scheduler.scheduleInactivity(updated);
+    if (updated) {
+      await this.scheduler.cancelDrain(containerId);
+      await this.scheduler.scheduleInactivity(updated);
+    }
   }
 
   public async touchByCookieStore(cookieStoreId: string): Promise<string | undefined> {
@@ -259,7 +265,37 @@ export class ContainerManager {
       record.policy = policy;
       updated = structuredClone(record);
     });
-    if (updated) await this.scheduler.scheduleInactivity(updated);
+    if (!updated) return;
+    if (updated.drainDeadline !== undefined) {
+      if (policy.destroyOnLastTabClose && policy.graceSeconds > 0) {
+        // Re-anchor an active drain window to the new grace value.
+        const deadline = this.now() + policy.graceSeconds * 1_000;
+        await this.repository.transaction((draft) => {
+          const current = draft.containers[containerId];
+          if (current) current.drainDeadline = deadline;
+        });
+        await this.scheduler.scheduleDrain(containerId, deadline);
+        await this.scheduler.cancelInactivity(containerId);
+      } else {
+        await this.clearDrain(containerId);
+      }
+    } else {
+      await this.scheduler.scheduleInactivity(updated);
+    }
+  }
+
+  private async clearDrain(containerId: string): Promise<void> {
+    let record: ContainerRecord | undefined;
+    await this.repository.transaction((draft) => {
+      const current = draft.containers[containerId];
+      if (!current) return;
+      delete current.drainDeadline;
+      record = structuredClone(current);
+    });
+    if (record) {
+      await this.scheduler.cancelDrain(containerId);
+      await this.scheduler.scheduleInactivity(record);
+    }
   }
 
   public async recoverCreationIntents(): Promise<void> {
@@ -295,6 +331,7 @@ export class ContainerManager {
         await this.repository.transaction((draft) => {
           draft.containers[intent.id] = record;
           delete draft.creationIntents[intent.id];
+          draft.lifetimeStats.containersCreated += 1;
         });
         claimed.add(matching.cookieStoreId);
       } else if (this.now() - intent.createdAt > CREATION_INTENT_MAX_AGE_MS) {

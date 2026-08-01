@@ -6,6 +6,7 @@ import type {
   Settings,
 } from "../core/types";
 import {
+  countdownText,
   downloadText,
   errorText,
   formatDuration,
@@ -35,6 +36,20 @@ let current: PublicState | undefined;
 let refreshGeneration = 0;
 let scheduledRefresh: number | undefined;
 let uiBound = false;
+let drainChips: Array<{ deadline: number; el: HTMLElement }> = [];
+let drainTicker: number | undefined;
+
+function startDrainTicker(): void {
+  if (drainTicker !== undefined) return;
+  drainTicker = window.setInterval(() => {
+    if (drainChips.length === 0) {
+      window.clearInterval(drainTicker);
+      drainTicker = undefined;
+      return;
+    }
+    for (const chip of drainChips) chip.el.textContent = countdownText(chip.deadline);
+  }, 1_000);
+}
 
 function input(id: string): HTMLInputElement {
   return element<HTMLInputElement>(`#${id}`);
@@ -58,6 +73,7 @@ function setAppState(state: "booting" | "ready" | "error", error?: unknown): voi
 
 function setPolicy(prefix: "once" | "reuse", policy: LifecyclePolicy): void {
   input(`${prefix}-last-tab`).checked = policy.destroyOnLastTabClose;
+  input(`${prefix}-grace`).value = String(policy.graceSeconds);
   input(`${prefix}-restart`).checked = policy.destroyOnBrowserRestart;
   input(`${prefix}-inactivity`).checked = policy.inactivity.enabled;
   input(`${prefix}-minutes`).value = String(policy.inactivity.minutes);
@@ -66,6 +82,7 @@ function setPolicy(prefix: "once" | "reuse", policy: LifecyclePolicy): void {
 function readPolicy(prefix: "once" | "reuse"): LifecyclePolicy {
   return {
     destroyOnLastTabClose: input(`${prefix}-last-tab`).checked,
+    graceSeconds: Number(input(`${prefix}-grace`).value),
     destroyOnBrowserRestart: input(`${prefix}-restart`).checked,
     inactivity: {
       enabled: input(`${prefix}-inactivity`).checked,
@@ -154,6 +171,14 @@ function sessionCard(record: ContainerView): HTMLElement {
   const meta = node("div", { className: "session-meta" });
   for (const text of policyChips(record))
     meta.append(node("span", { className: "chip", text }));
+  if (record.drainDeadline !== undefined) {
+    const drain = node("span", {
+      className: "chip drain-chip",
+      text: countdownText(record.drainDeadline),
+    });
+    drainChips.push({ deadline: record.drainDeadline, el: drain });
+    meta.append(drain);
+  }
   card.append(meta);
 
   const policy = node("div", { className: "session-policy" });
@@ -176,6 +201,16 @@ function sessionCard(record: ContainerView): HTMLElement {
       "aria-label": "Inactivity timeout in minutes",
     },
   });
+  const grace = node("input", {
+    className: "minutes",
+    attrs: {
+      type: "number",
+      min: "0",
+      max: "600",
+      value: String(record.policy.graceSeconds),
+      "aria-label": "Undo-close grace period in seconds (0 = immediate)",
+    },
+  });
   const save = node("button", {
     className: "button secondary",
     text: "Save session policy",
@@ -188,13 +223,14 @@ function sessionCard(record: ContainerView): HTMLElement {
         containerId: record.id,
         policy: {
           destroyOnLastTabClose: last.checked,
+          graceSeconds: Number(grace.value),
           destroyOnBrowserRestart: restart.checked,
           inactivity: { enabled: idle.checked, minutes: Number(minutes.value) },
         },
       }),
     );
   });
-  policy.append(lastLabel, restartLabel, idleLabel, minutes, save);
+  policy.append(lastLabel, restartLabel, idleLabel, minutes, grace, save);
   card.append(policy);
   if (record.lastError)
     card.append(node("p", { className: "container-error", text: record.lastError }));
@@ -317,6 +353,7 @@ async function renderShortcuts(): Promise<void> {
 
 function render(state: PublicState): void {
   current = state;
+  drainChips = [];
   const health = element<HTMLElement>("#health");
   health.textContent = state.health.summary;
   health.dataset["level"] = state.health.level;
@@ -336,6 +373,15 @@ function render(state: PublicState): void {
       ? "On"
       : "Limited"
     : "Off";
+  element<HTMLElement>("#metric-lifetime-sessions").textContent = String(
+    state.lifetimeStats.containersCleaned,
+  );
+  element<HTMLElement>("#metric-lifetime-data").textContent = String(
+    state.lifetimeStats.dataTypesErased,
+  );
+  element<HTMLElement>("#metric-lifetime-tabs").textContent = String(
+    state.lifetimeStats.tabsClosed,
+  );
 
   renderSettings(state);
 
@@ -365,6 +411,7 @@ function render(state: PublicState): void {
   } else {
     for (const entry of state.cleanupHistory) history.append(historyItem(entry));
   }
+  startDrainTicker();
 }
 
 async function refresh(options: { showBoot?: boolean } = {}): Promise<void> {
@@ -573,6 +620,10 @@ function bind(): void {
       browser.permissions.onAdded.removeListener(scheduleStateRefresh);
       browser.permissions.onRemoved.removeListener(scheduleStateRefresh);
       if (scheduledRefresh !== undefined) window.clearTimeout(scheduledRefresh);
+      if (drainTicker !== undefined) {
+        window.clearInterval(drainTicker);
+        drainTicker = undefined;
+      }
     },
     { once: true },
   );

@@ -7,11 +7,13 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   startUrl: "about:blank",
   oneTimePolicy: Object.freeze({
     destroyOnLastTabClose: true,
+    graceSeconds: 0,
     destroyOnBrowserRestart: true,
     inactivity: Object.freeze({ enabled: false, minutes: 30 }),
   }),
   reusablePolicy: Object.freeze({
     destroyOnLastTabClose: false,
+    graceSeconds: 0,
     destroyOnBrowserRestart: true,
     inactivity: Object.freeze({ enabled: true, minutes: 30 }),
   }),
@@ -35,6 +37,13 @@ export function createInitialState(): PersistedState {
     containers: {},
     creationIntents: {},
     cleanupHistory: [],
+    lifetimeStats: {
+      containersCreated: 0,
+      containersCleaned: 0,
+      cleanupsFailed: 0,
+      dataTypesErased: 0,
+      tabsClosed: 0,
+    },
   };
 }
 
