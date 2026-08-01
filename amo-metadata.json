@@ -1,13 +1,13 @@
 {
   "summary": {
-    "en-US": "Disposable Firefox containers with automatic, transparent, privacy-first cleanup."
+    "en-US": "Self-cleaning Firefox containers for temporary browsing - transparent, bounded cleanup, fully offline."
   },
   "categories": ["privacy-security", "tabs"],
   "homepage": {
-    "en-US": "https://github.com/astarling-x/Ephemeral"
+    "en-US": "https://github.com/mheci/Ephemeral"
   },
   "support_url": {
-    "en-US": "https://github.com/astarling-x/Ephemeral/issues"
+    "en-US": "https://github.com/mheci/Ephemeral/issues"
   },
   "requires_payment": false,
   "version": {

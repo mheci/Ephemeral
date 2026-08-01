@@ -5,10 +5,24 @@
   background:
     radial-gradient(
       circle at 90% -5%,
-      color-mix(in srgb, var(--accent) 15%, transparent),
+      color-mix(in srgb, var(--accent) 16%, transparent),
       transparent 240px
     ),
+    radial-gradient(
+      circle at 8% 104%,
+      color-mix(in srgb, var(--flame) 9%, transparent),
+      transparent 220px
+    ),
+    radial-gradient(
+      color-mix(in srgb, var(--text) 5%, transparent) 1px,
+      transparent 1px
+    ),
     var(--bg);
+  background-size:
+    auto,
+    auto,
+    20px 20px,
+    auto;
 }
 .popup-header {
   position: sticky;
@@ -21,6 +35,7 @@
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 4%);
 }
 .popup-system {
   display: flex;
@@ -134,6 +149,9 @@
   cursor: pointer;
   font-size: 16px;
 }
+.refresh-button:hover {
+  filter: brightness(1.05);
+}
 
 .create-panel,
 .popup-section {
@@ -185,6 +203,28 @@
   opacity: 0.55;
   cursor: wait;
 }
+.create-card.primary-create {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.create-card.primary-create:hover {
+  border-color: transparent;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+.create-card.primary-create small {
+  color: rgb(255 255 255 / 82%);
+}
+.create-card.primary-create .create-icon {
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+}
+.create-card.primary-create .shortcut-hint {
+  background: rgb(255 255 255 / 14%);
+  border-color: rgb(255 255 255 / 26%);
+  color: rgb(255 255 255 / 92%);
+}
 .create-card > span:nth-child(2) {
   display: grid;
   gap: 2px;
@@ -207,7 +247,10 @@
   font-size: 17px;
 }
 .create-icon.reusable {
-  background: #7759b7;
+  background: linear-gradient(140deg, #8f6fd8, #6b4db0);
+}
+.create-icon.window {
+  background: linear-gradient(140deg, #17919e, #0b5f6a);
 }
 .create-card > span:last-child {
   color: var(--muted);

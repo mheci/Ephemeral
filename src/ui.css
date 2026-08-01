@@ -9,6 +9,9 @@
   --accent: #087f8c;
   --accent-hover: #066b76;
   --accent-soft: #e3f4f4;
+  --accent-gradient: linear-gradient(135deg, #0d6570, #2aa6ae);
+  --flame: #ff8a3d;
+  --flame-soft: #fff3e7;
   --danger: #b42318;
   --danger-soft: #fef0ed;
   --warning: #9a6700;
@@ -16,6 +19,8 @@
   --success: #16744a;
   --shadow: 0 1px 2px rgb(23 35 42 / 8%), 0 6px 18px rgb(23 35 42 / 6%);
   --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   font: menu;
   font-family:
     Inter,
@@ -37,6 +42,9 @@
     --accent: #45c1c8;
     --accent-hover: #69d3d8;
     --accent-soft: #173c40;
+    --accent-gradient: linear-gradient(135deg, #2f9aa3, #69d3d8);
+    --flame: #ff9d3d;
+    --flame-soft: #422816;
     --danger: #ff8f86;
     --danger-soft: #442522;
     --warning: #ffd166;
@@ -123,9 +131,15 @@ p {
   cursor: pointer;
   font-weight: 600;
   text-decoration: none;
+  transition:
+    filter 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
 }
 .button:hover {
-  filter: brightness(0.98);
+  filter: brightness(1.03);
+  transform: translateY(-1px);
 }
 .button:focus-visible,
 .text-button:focus-visible,
@@ -137,10 +151,15 @@ a:focus-visible {
 .button:disabled {
   opacity: 0.55;
   cursor: wait;
+  transform: none;
 }
 .button.primary {
-  background: var(--accent);
+  background: var(--accent-gradient);
   color: #fff;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.button.primary:hover {
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 38%, transparent);
 }
 @media (prefers-color-scheme: dark) {
   .button.primary {
@@ -150,6 +169,9 @@ a:focus-visible {
 .button.secondary {
   background: var(--surface);
   border-color: var(--border);
+}
+.button.secondary:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 .button.danger {
   background: var(--danger);
