@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/mheci/Ephemeral/compare/v1.5.0...v2.0.0) (2026-08-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* migrate add-on identity to ephemeral@mheci.github.io ([#8](https://github.com/mheci/Ephemeral/issues/8))
+
+### Features
+
+* migrate add-on identity to ephemeral@mheci.github.io ([#8](https://github.com/mheci/Ephemeral/issues/8)) ([9361f4f](https://github.com/mheci/Ephemeral/commit/9361f4f2a340a65937b94ecaaf0144dbab489356))
+
 ## [1.5.0](https://github.com/mheci/Ephemeral/compare/v1.4.0...v1.5.0) (2026-08-01)
 
 
