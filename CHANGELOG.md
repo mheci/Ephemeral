@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/mheci/Ephemeral/compare/v2.0.1...v2.1.0) (2026-08-01)
+
+
+### Features
+
+* add undo-close drain grace and lifetime privacy stats ([#12](https://github.com/mheci/Ephemeral/issues/12)) ([83d2388](https://github.com/mheci/Ephemeral/commit/83d23883866b22e5a22ac1debf97cd8510b7c2ed))
+
 ## [2.0.1](https://github.com/mheci/Ephemeral/compare/v2.0.0...v2.0.1) (2026-08-01)
 
 
