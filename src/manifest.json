@@ -6,7 +6,7 @@
   "homepage_url": "https://github.com/mheci/Ephemeral",
   "browser_specific_settings": {
     "gecko": {
-      "id": "ephemeral@astarling-x.github.io",
+      "id": "ephemeral@mheci.github.io",
       "strict_min_version": "153.0",
       "data_collection_permissions": {
         "required": [

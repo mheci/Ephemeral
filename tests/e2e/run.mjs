@@ -9,7 +9,7 @@ import firefox from "selenium-webdriver/firefox.js";
 const root = path.resolve(import.meta.dirname, "../..");
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const addon = path.join(root, `artifacts/ephemeral-test-${packageJson.version}.zip`);
-const extensionId = "ephemeral@astarling-x.github.io";
+const extensionId = "ephemeral@mheci.github.io";
 const extensionUuid = "8cb2e518-31d1-4a87-9ae8-2b127fcd3ee1";
 const port = 17_779;
 
