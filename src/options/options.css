@@ -3,10 +3,24 @@
   background:
     radial-gradient(
       circle at 92% -10%,
-      color-mix(in srgb, var(--accent) 12%, transparent),
+      color-mix(in srgb, var(--accent) 13%, transparent),
       transparent 34rem
     ),
+    radial-gradient(
+      circle at 0% 98%,
+      color-mix(in srgb, var(--flame) 8%, transparent),
+      transparent 30rem
+    ),
+    radial-gradient(
+      color-mix(in srgb, var(--text) 4%, transparent) 1px,
+      transparent 1px
+    ),
     var(--bg);
+  background-size:
+    auto,
+    auto,
+    26px 26px,
+    auto;
 }
 
 .skip-link {
@@ -32,6 +46,7 @@
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(14px);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 4%);
 }
 .header-inner {
   max-width: 1240px;
@@ -360,13 +375,13 @@
   margin-right: 7px;
   border-radius: 8px;
   color: #fff;
-  background: var(--accent);
+  background: linear-gradient(140deg, #17919e, #0b5f6a);
   font-size: 12px;
   font-weight: 800;
   vertical-align: middle;
 }
 .legend-icon.reusable {
-  background: #7759b7;
+  background: linear-gradient(140deg, #8f6fd8, #6b4db0);
 }
 .policy-card .check {
   padding: 3px 0;
