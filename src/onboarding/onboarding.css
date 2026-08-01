@@ -3,15 +3,30 @@
   background:
     radial-gradient(
       circle at 85% -10%,
-      color-mix(in srgb, var(--accent) 15%, transparent),
+      color-mix(in srgb, var(--accent) 18%, transparent),
       transparent 420px
     ),
     radial-gradient(
-      circle at 15% 110%,
-      color-mix(in srgb, var(--accent) 8%, transparent),
-      transparent 500px
+      circle at 12% 108%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 480px
+    ),
+    radial-gradient(
+      circle at 90% 92%,
+      color-mix(in srgb, var(--flame) 12%, transparent),
+      transparent 400px
+    ),
+    radial-gradient(
+      color-mix(in srgb, var(--text) 4%, transparent) 1px,
+      transparent 1px
     ),
     var(--bg);
+  background-size:
+    auto,
+    auto,
+    auto,
+    24px 24px,
+    auto;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -23,35 +38,56 @@
   max-width: 640px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    var(--shadow),
+    0 20px 50px color-mix(in srgb, var(--accent) 10%, transparent);
   overflow: hidden;
 }
 
 .onboarding-header {
+  position: relative;
   text-align: center;
   padding: 36px 28px 20px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent-soft) 80%, var(--surface)),
-    var(--surface)
-  );
-  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(color-mix(in srgb, #fff 12%, transparent) 1px, transparent 1px),
+    var(--accent-gradient);
+  background-size:
+    28px 28px,
+    auto;
+  border-bottom: 1px solid rgb(255 255 255 / 16%);
+}
+
+.onboarding-header::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  right: 58px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffd27a;
+  box-shadow:
+    26px 14px 0 -3px #ffb23e,
+    40px 2px 0 -5px #ffe0a3;
+  opacity: 0.9;
 }
 
 .onboarding-header img {
   margin-bottom: 12px;
+  filter: drop-shadow(0 6px 16px rgb(0 0 0 / 28%));
 }
 
 .onboarding-header h1 {
   margin: 0 0 8px;
+  color: #fff;
   font-size: 28px;
   letter-spacing: -0.02em;
 }
 
 .onboarding-header p {
   margin: 0;
-  color: var(--muted);
+  color: rgb(255 255 255 / 85%);
   font-size: 14px;
 }
 
@@ -75,7 +111,7 @@
 .progress-fill {
   height: 100%;
   width: 25%;
-  background: var(--accent);
+  background: var(--accent-gradient);
   border-radius: 99px;
   transition: width 300ms ease;
 }
