@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/mheci/Ephemeral/compare/v1.3.0...v1.4.0) (2026-08-01)
+
+
+### Features
+
+* ephemeral windows, honest site-data reporting, resilient state recovery ([#3](https://github.com/mheci/Ephemeral/issues/3)) ([db82d50](https://github.com/mheci/Ephemeral/commit/db82d509e6420237093a49c053f8a313837bf4f5))
+
 ## 1.2.0 — 2026-07-29
 
 ### Added
