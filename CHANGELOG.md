@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/mheci/Ephemeral/compare/v1.4.0...v1.5.0) (2026-08-01)
+
+
+### Features
+
+* brand and modernize the extension design ([#6](https://github.com/mheci/Ephemeral/issues/6)) ([d5d9e60](https://github.com/mheci/Ephemeral/commit/d5d9e601bcb8900daf72179f57c8c2de914bdb3c))
+
 ## [1.4.0](https://github.com/mheci/Ephemeral/compare/v1.3.0...v1.4.0) (2026-08-01)
 
 
