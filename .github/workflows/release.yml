@@ -106,7 +106,7 @@ jobs:
           XPI=$(find signed -maxdepth 1 -name '*.xpi' -print -quit)
           test -n "$XPI"
           cp "$XPI" "artifacts/ephemeral-$VERSION-signed.xpi"
-          unzip -p "artifacts/ephemeral-$VERSION-signed.xpi" manifest.json | jq -e --arg version "$VERSION" '.version == $version and .browser_specific_settings.gecko.id == "ephemeral@astarling-x.github.io"' >/dev/null
+          unzip -p "artifacts/ephemeral-$VERSION-signed.xpi" manifest.json | jq -e --arg version "$VERSION" '.version == $version and .browser_specific_settings.gecko.id == "ephemeral@mheci.github.io"' >/dev/null
           (cd artifacts && sha256sum "ephemeral-$VERSION-signed.xpi" "ephemeral-$VERSION.zip" "ephemeral-$VERSION-source.zip" > SHA256SUMS)
       - name: Publish verified assets
         if: steps.release.outputs.skip != 'true'
