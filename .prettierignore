@@ -6,3 +6,9 @@ package-lock.json
 *.png
 *.zip
 *.xpi
+
+# release-please owns these files: it rewrites src/manifest.json with its own JSON
+# serializer (array wrapping) and generates CHANGELOG.md sections that do not
+# match Prettier's markdown rules.
+CHANGELOG.md
+src/manifest.json
