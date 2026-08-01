@@ -68,10 +68,14 @@ Growth proportional to active containers + history limit.
 
 **Manifest commands:**
 
-- `open-ephemeral-tab` Ctrl+Shift+E
-- `open-ephemeral-space` Ctrl+Shift+U
+- `open-ephemeral-tab` Ctrl+Alt+E (MacCtrl+Shift+E on macOS)
+- `open-ephemeral-space` Ctrl+Alt+U (MacCtrl+Shift+U on macOS)
 - `open-ephemeral-window` assignable (no default key)
 - `_execute_action` Ctrl+Shift+Period (popup)
+
+The default shortcuts avoid Firefox's built-in bindings (Ctrl+Shift+E is the
+Network Monitor, Ctrl+Shift+U collides with the View Source family); browser-owned
+combinations cannot be overridden and would silently not fire.
 
 **Background:** `commands.onCommand` + `menus.onClicked` (link/page context) both debounced, call `createContainerWithUrl` / `createWindow` with sanitized URL (http/https/about:blank/about:newtab only, strips creds, 2048 cap).
 
