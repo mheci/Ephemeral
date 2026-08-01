@@ -303,6 +303,29 @@ export class Controller {
     await this.updateBadge();
   }
 
+  public async createWindow(
+    kind: "one-time" | "reusable",
+    url?: string,
+  ): Promise<void> {
+    await this.initialize();
+    const state = await this.repository.snapshot();
+    const sanitized =
+      url === undefined ? state.settings.startUrl : this.sanitizeUrl(url);
+    let containerId = "";
+    let tabId = -1;
+    await this.lifecycleLock.run("create", async () => {
+      const created = await this.manager.createWindow(
+        kind,
+        this.browserSessionId,
+        sanitized,
+      );
+      containerId = created.containerId;
+      tabId = created.tabId;
+    });
+    this.trackTab(tabId, containerId);
+    await this.updateBadge();
+  }
+
   public async openTab(containerId: string): Promise<void> {
     await this.initialize();
     const tabId = await this.manager.openTab(containerId);

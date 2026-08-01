@@ -15,6 +15,13 @@ export type DownloadEraseResult = {
   remaining: number;
 };
 
+export type SiteDataRemoval = {
+  /** Data types for which Firefox accepted the container-scoped removal call. */
+  acknowledgedTypes: string[];
+  /** Data types for which Firefox rejected the removal call. */
+  failedTypes: string[];
+};
+
 export type BrowserAdapter = {
   loadState(): Promise<unknown>;
   saveState(value: unknown): Promise<void>;
@@ -34,7 +41,8 @@ export type BrowserAdapter = {
   getTab(tabId: number): Promise<BrowserTab | undefined>;
   createTab(cookieStoreId: string, url: string): Promise<number>;
   closeTabs(tabIds: number[]): Promise<void>;
-  removeScopedSiteData(cookieStoreId: string): Promise<void>;
+  removeScopedSiteData(cookieStoreId: string): Promise<SiteDataRemoval>;
+  createWindow(cookieStoreId: string, url: string): Promise<number>;
   hasDownloadsPermission(): Promise<boolean>;
   requestDownloadsPermission(): Promise<boolean>;
   removeDownloadsPermission(): Promise<boolean>;

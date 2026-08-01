@@ -61,6 +61,41 @@ export class ContainerManager {
     url: string,
     openTab: boolean,
   ): Promise<ContainerRecord> {
+    const { record } = await this.createRecord(
+      kind,
+      browserSessionId,
+      url,
+      openTab ? "tab" : "none",
+    );
+    return record;
+  }
+
+  public async createWindow(
+    kind: ContainerKind,
+    browserSessionId: string,
+    url: string,
+  ): Promise<{ containerId: string; tabId: number }> {
+    const { record, createdTabId } = await this.createRecord(
+      kind,
+      browserSessionId,
+      url,
+      "window",
+    );
+    if (createdTabId === undefined) {
+      throw new EphemeralError(
+        `Container created, but Firefox did not report a window tab for ${record.name}`,
+        "WINDOW_CREATE_FAILED",
+      );
+    }
+    return { containerId: record.id, tabId: createdTabId };
+  }
+
+  private async createRecord(
+    kind: ContainerKind,
+    browserSessionId: string,
+    url: string,
+    mode: "none" | "tab" | "window",
+  ): Promise<{ record: ContainerRecord; createdTabId?: number }> {
     const [state, capabilities] = await Promise.all([
       this.repository.snapshot(),
       this.getCapabilities(),
@@ -133,7 +168,8 @@ export class ContainerManager {
     });
     await this.scheduler.scheduleInactivity(record);
 
-    if (openTab) {
+    let createdTabId: number | undefined;
+    if (mode === "tab") {
       try {
         await this.adapter.createTab(record.cookieStoreId, url);
       } catch (error) {
@@ -144,8 +180,19 @@ export class ContainerManager {
         });
         throw new EphemeralError(message, "TAB_CREATE_FAILED", { cause: error });
       }
+    } else if (mode === "window") {
+      try {
+        createdTabId = await this.adapter.createWindow(record.cookieStoreId, url);
+      } catch (error) {
+        const message = `Container created, but Firefox could not open its window: ${errorMessage(error)}`;
+        await this.repository.transaction((draft) => {
+          const current = draft.containers[id];
+          if (current) current.lastError = message;
+        });
+        throw new EphemeralError(message, "WINDOW_CREATE_FAILED", { cause: error });
+      }
     }
-    return record;
+    return createdTabId === undefined ? { record } : { record, createdTabId };
   }
 
   public async openTab(containerId: string): Promise<number> {

@@ -100,6 +100,19 @@ try {
   const driverHandle = await openTrustedExtensionPage("test/index.html");
   await driver.wait(until.elementLocated(By.id("ready")), 5_000);
 
+  // The extension opens an onboarding tab on install. Close that window so
+  // later window-handle bookkeeping only sees windows created by the test.
+  const onboardingHandle = (await driver.getAllWindowHandles()).find(
+    (handle) => handle !== initialHandle && handle !== driverHandle,
+  );
+  if (onboardingHandle) {
+    await driver.switchTo().window(onboardingHandle);
+    if ((await driver.getCurrentUrl()).includes("onboarding/index.html")) {
+      await driver.close();
+      await driver.switchTo().window(driverHandle);
+    }
+  }
+
   const optionsHandle = await openTrustedExtensionPage("options/index.html");
   await driver.wait(
     until.elementLocated(By.css('body[data-app-state="ready"]')),
@@ -161,6 +174,38 @@ try {
     async () => !(await driver.getAllWindowHandles()).includes(nativeTabHandle),
   );
 
+  // A dedicated ephemeral window: Firefox must open a new browser window in
+  // its own container, and closing that window must trigger cleanup.
+  const handlesBeforeWindow = new Set(await driver.getAllWindowHandles());
+  response = await extensionMessage({
+    type: "CREATE_WINDOW",
+    kind: "one-time",
+    url: `http://127.0.0.1:${port}/`,
+  });
+  assert.equal(response.ok, true, response.error);
+  const windowHandle = await waitFor(async () =>
+    (await driver.getAllWindowHandles()).find(
+      (handle) => !handlesBeforeWindow.has(handle),
+    ),
+  );
+  assert.ok(windowHandle);
+  await driver.switchTo().window(windowHandle);
+  await driver.wait(until.elementLocated(By.id("fixture")), 5_000);
+  await driver.switchTo().window(driverHandle);
+  response = await extensionMessage({ type: "GET_STATE" });
+  const windowContainer = response.data.containers.find(
+    (record) => record.kind === "one-time",
+  );
+  assert.ok(windowContainer);
+  assert.equal(windowContainer.tabCount, 1);
+  await driver.switchTo().window(windowHandle);
+  await driver.close();
+  await driver.switchTo().window(driverHandle);
+  await waitFor(async () => {
+    const state = await extensionMessage({ type: "GET_STATE" });
+    return !state.data.containers.some((record) => record.id === windowContainer.id);
+  }, 15_000);
+
   response = await extensionMessage({
     type: "CREATE_CONTAINER",
     kind: "one-time",
@@ -178,9 +223,19 @@ try {
     `http://127.0.0.1:${port}/`,
   );
   await waitFor(async () => (await driver.getAllWindowHandles()).length >= 3);
-  const fixtureHandle = (await driver.getAllWindowHandles()).find(
-    (handle) => handle !== driverHandle && handle !== initialHandle,
-  );
+  // Select the fixture window by URL rather than by exclusion: the ordering of
+  // window handles is not guaranteed, and other extension windows (onboarding,
+  // popup) may still be open at this point.
+  const fixtureHandle = await waitFor(async () => {
+    const candidates = await driver.getAllWindowHandles();
+    for (const handle of candidates) {
+      await driver.switchTo().window(handle);
+      if ((await driver.getCurrentUrl()).startsWith(`http://127.0.0.1:${port}/`)) {
+        return handle;
+      }
+    }
+    return undefined;
+  }, 10_000);
   assert.ok(fixtureHandle);
   await driver.switchTo().window(fixtureHandle);
   await driver.wait(until.elementLocated(By.id("fixture")), 5_000);
@@ -210,7 +265,7 @@ try {
   });
   assert.equal(invalid.ok, false);
   console.log(
-    "Firefox E2E passed: popup/dashboard boot, native container New Tab, isolation, storage fixture, lifecycle cleanup, and import rejection.",
+    "Firefox E2E passed: popup/dashboard boot, native container New Tab, isolation, storage fixture, ephemeral window, lifecycle cleanup, and import rejection.",
   );
 } finally {
   await driver.quit().catch(() => undefined);

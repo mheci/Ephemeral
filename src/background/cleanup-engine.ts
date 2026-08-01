@@ -16,10 +16,15 @@ import type { StateRepository } from "./state-repository";
 
 const SCOPED_LIMITATIONS = [
   API_LIMITATIONS[0] ?? "Container-scoped browsing history removal is unavailable.",
-  API_LIMITATIONS[1] ??
-    "Container-scoped cache and service-worker removal is unavailable.",
   API_LIMITATIONS[4] ?? "Site-storage removal cannot be byte-verified.",
 ];
+
+function describeRemovedTypes(types: string[]): string {
+  if (types.length === 0) return "no data types";
+  if (types.length === 1) return types[0] ?? "unknown";
+  const head = types.slice(0, -1).join(", ");
+  return `${head}, and ${types[types.length - 1]}`;
+}
 
 function step(
   name: CleanupStep["name"],
@@ -157,16 +162,32 @@ export class CleanupEngine {
       );
 
       phaseStarted = this.now();
-      await this.adapter.removeScopedSiteData(record.cookieStoreId);
-      steps.push(
-        step(
-          "scoped-site-data",
-          "succeeded",
-          phaseStarted,
-          "Firefox acknowledged removal of cookies, IndexedDB, local storage, and session storage for this cookie store.",
-          this.now,
-        ),
-      );
+      const removal = await this.adapter.removeScopedSiteData(record.cookieStoreId);
+      if (removal.failedTypes.length > 0) {
+        const detail = `Firefox rejected container-scoped removal of: ${describeRemovedTypes(
+          removal.failedTypes,
+        )}.`;
+        steps.push(step("scoped-site-data", "limited", phaseStarted, detail, this.now));
+        limitations.push(detail);
+      } else {
+        steps.push(
+          step(
+            "scoped-site-data",
+            "succeeded",
+            phaseStarted,
+            `Firefox acknowledged removal of ${describeRemovedTypes(
+              removal.acknowledgedTypes,
+            )} for this cookie store.`,
+            this.now,
+          ),
+        );
+      }
+      if (removal.acknowledgedTypes.length === 0) {
+        throw new EphemeralError(
+          "Firefox rejected every container-scoped site-data removal",
+          "SITE_DATA_FAILED",
+        );
+      }
 
       phaseStarted = this.now();
       if (!state.settings.cleanup.eraseDownloadMetadata) {

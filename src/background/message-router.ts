@@ -29,6 +29,9 @@ export class MessageRouter {
         case "CREATE_CONTAINER":
           await this.controller.createContainer(message.kind, message.openTab);
           return this.success();
+        case "CREATE_WINDOW":
+          await this.controller.createWindow(message.kind, message.url);
+          return this.success();
         case "OPEN_TAB":
           await this.controller.openTab(message.containerId);
           return this.success();
