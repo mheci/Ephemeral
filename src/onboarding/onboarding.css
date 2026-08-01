@@ -74,6 +74,7 @@
 
 .progress-fill {
   height: 100%;
+  width: 25%;
   background: var(--accent);
   border-radius: 99px;
   transition: width 300ms ease;
