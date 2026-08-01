@@ -183,7 +183,7 @@ export class MockAdapter implements BrowserAdapter {
   }
 
   public extensionVersion(): string {
-    return "1.2.0-test";
+    return "1.4.0-test";
   }
 
   public async browserVersion(): Promise<string> {

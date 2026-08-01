@@ -61,8 +61,16 @@ function bind(): void {
     // Create new ephemeral tab and close onboarding
     void browser.runtime
       .sendMessage({ type: "CREATE_CONTAINER", kind: "one-time", openTab: true })
-      .then(() => browser.storage.local.set({ onboardingCompleted: true }))
-      .then(() => window.close())
+      .then((response: { ok?: boolean }) => {
+        if (response?.ok === true) {
+          return browser.storage.local
+            .set({ onboardingCompleted: true })
+            .then(() => window.close());
+        }
+        // Background rejected the request – send the user to the dashboard
+        window.location.href = "../options/index.html";
+        return;
+      })
       .catch(() => {
         // Fallback: open dashboard
         window.location.href = "../options/index.html";
