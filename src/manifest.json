@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Ephemeral",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Private, self-cleaning Firefox containers for temporary browsing - transparent, bounded cleanup, fully offline.",
   "homepage_url": "https://github.com/mheci/Ephemeral",
   "browser_specific_settings": {
