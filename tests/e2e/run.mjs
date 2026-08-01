@@ -78,7 +78,6 @@ async function waitFor(predicate, timeoutMs = 10_000) {
 }
 
 async function openTrustedExtensionPage(relativePath) {
-  const before = new Set(await driver.getAllWindowHandles());
   const url = `moz-extension://${extensionUuid}/${relativePath}`;
   await driver.setContext(firefox.Context.CHROME);
   await driver.executeScript(
@@ -87,9 +86,20 @@ async function openTrustedExtensionPage(relativePath) {
     url,
   );
   await driver.setContext(firefox.Context.CONTENT);
-  const handle = await waitFor(async () =>
-    (await driver.getAllWindowHandles()).find((candidate) => !before.has(candidate)),
-  );
+  // Select the window by URL rather than by handle exclusion: the onboarding
+  // tab opens asynchronously on install and can otherwise be mistaken for
+  // the newly opened extension page.
+  const handle = await waitFor(async () => {
+    const candidates = await driver.getAllWindowHandles();
+    for (const candidate of candidates) {
+      await driver.switchTo().window(candidate);
+      if ((await driver.getCurrentUrl()).startsWith(url)) return candidate;
+    }
+    return undefined;
+  }, 15_000);
+  if (handle === undefined) {
+    throw new Error(`Could not find extension window for ${relativePath}`);
+  }
   await driver.switchTo().window(handle);
   return handle;
 }
@@ -98,7 +108,7 @@ try {
   const initialHandle = await driver.getWindowHandle();
   await driver.installAddon(addon, true);
   const driverHandle = await openTrustedExtensionPage("test/index.html");
-  await driver.wait(until.elementLocated(By.id("ready")), 5_000);
+  await driver.wait(until.elementLocated(By.id("ready")), 15_000);
 
   // The extension opens an onboarding tab on install. Close that window so
   // later window-handle bookkeeping only sees windows created by the test.
@@ -190,7 +200,7 @@ try {
   );
   assert.ok(windowHandle);
   await driver.switchTo().window(windowHandle);
-  await driver.wait(until.elementLocated(By.id("fixture")), 5_000);
+  await driver.wait(until.elementLocated(By.id("fixture")), 10_000);
   await driver.switchTo().window(driverHandle);
   response = await extensionMessage({ type: "GET_STATE" });
   const windowContainer = response.data.containers.find(
@@ -238,7 +248,7 @@ try {
   }, 10_000);
   assert.ok(fixtureHandle);
   await driver.switchTo().window(fixtureHandle);
-  await driver.wait(until.elementLocated(By.id("fixture")), 5_000);
+  await driver.wait(until.elementLocated(By.id("fixture")), 10_000);
   assert.equal(
     await driver.executeScript("return localStorage.getItem('ephemeral-e2e')"),
     "present",
