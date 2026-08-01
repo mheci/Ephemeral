@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/mheci/Ephemeral/compare/v2.0.0...v2.0.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* move tab and space shortcuts off Firefox defaults ([#10](https://github.com/mheci/Ephemeral/issues/10)) ([ff9bcef](https://github.com/mheci/Ephemeral/commit/ff9bceffafca838328d8bf4f4c38706244b70386))
+
 ## [2.0.0](https://github.com/mheci/Ephemeral/compare/v1.5.0...v2.0.0) (2026-08-01)
 
 
