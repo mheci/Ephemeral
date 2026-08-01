@@ -84,7 +84,8 @@ export type CleanupStep = {
     | "download-metadata"
     | "remove-identity"
     | "extension-state"
-    | "verification";
+    | "verification"
+    | "cleanup";
   outcome: StepOutcome;
   durationMs: number;
   detail: string;

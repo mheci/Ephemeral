@@ -57,7 +57,6 @@ for (const relative of paths) {
     relative === "background.js"
       ? path.join(root, "build", relative)
       : path.join(root, "src", relative);
-  if (relative === "background.js") continue;
   try {
     await access(file);
   } catch {

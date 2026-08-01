@@ -289,7 +289,11 @@ export class CleanupEngine {
     const record = Object.values(state.containers).find(
       (candidate) => candidate.cookieStoreId === cookieStoreId,
     );
-    if (!record || record.status === "cleaning") return;
+    // A pending or in-flight cleanup already owns this container; it will
+    // observe the missing identity and record the removal itself.
+    if (!record || record.status === "pending" || record.status === "cleaning") {
+      return;
+    }
     const startedAt = this.now();
     const limitations = [
       ...SCOPED_LIMITATIONS,
@@ -476,7 +480,7 @@ export class CleanupEngine {
     const message = errorMessage(error);
     steps.push(
       step(
-        "verification",
+        "cleanup",
         "failed",
         this.now(),
         `Cleanup stopped safely: ${message}`,

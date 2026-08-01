@@ -29,41 +29,45 @@ function report(task: Promise<unknown>, event: string): void {
 }
 
 function createContextMenus(): void {
-  // Best-effort: menus permission may be missing in tests, ignore errors
-  try {
-    // Remove existing to avoid duplicates on re-creation after restart
-    void browser.menus.removeAll().then(() => {
-      // Link context: open link URL in isolated ephemeral container
-      browser.menus.create({
-        id: "open-link-ephemeral-tab",
-        title: "Open link in new ephemeral tab",
-        contexts: ["link"],
-      });
-      browser.menus.create({
-        id: "open-link-ephemeral-space",
-        title: "Open link in new ephemeral space",
-        contexts: ["link"],
-      });
-      browser.menus.create({
-        id: "open-link-ephemeral-window",
-        title: "Open link in new ephemeral window",
-        contexts: ["link"],
-      });
-      // Page context: open current page in ephemeral
-      browser.menus.create({
-        id: "open-page-ephemeral-tab",
-        title: "Open this page in new ephemeral tab",
-        contexts: ["page"],
-      });
-      browser.menus.create({
-        id: "open-page-ephemeral-window",
-        title: "Open this page in new ephemeral window",
-        contexts: ["page"],
-      });
-    });
-  } catch {
-    // Ignore – menus API may be unavailable in some environments
-  }
+  // Best-effort: menus API may be missing in tests, ignore failures
+  void browser.menus.removeAll().then(
+    () => {
+      try {
+        // Link context: open link URL in isolated ephemeral container
+        browser.menus.create({
+          id: "open-link-ephemeral-tab",
+          title: "Open link in new ephemeral tab",
+          contexts: ["link"],
+        });
+        browser.menus.create({
+          id: "open-link-ephemeral-space",
+          title: "Open link in new ephemeral space",
+          contexts: ["link"],
+        });
+        browser.menus.create({
+          id: "open-link-ephemeral-window",
+          title: "Open link in new ephemeral window",
+          contexts: ["link"],
+        });
+        // Page context: open current page in ephemeral
+        browser.menus.create({
+          id: "open-page-ephemeral-tab",
+          title: "Open this page in new ephemeral tab",
+          contexts: ["page"],
+        });
+        browser.menus.create({
+          id: "open-page-ephemeral-window",
+          title: "Open this page in new ephemeral window",
+          contexts: ["page"],
+        });
+      } catch {
+        // Ignore – menus API may be unavailable in some environments
+      }
+    },
+    () => {
+      // Ignore – menus API may be unavailable in some environments
+    },
+  );
 }
 
 function maybeOpenOnboarding(reason: string): void {
