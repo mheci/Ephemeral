@@ -1,5 +1,12 @@
 import type { CleanupHistoryEntry, ContainerView, PublicState } from "../core/types";
-import { errorText, formatDuration, relativeTime, send, setBusy } from "../ui/client";
+import {
+  countdownText,
+  errorText,
+  formatDuration,
+  relativeTime,
+  send,
+  setBusy,
+} from "../ui/client";
 import { clear, element, node } from "../ui/dom";
 import { notify } from "../ui/notifications";
 
@@ -21,6 +28,20 @@ const COLOR_MAP: Readonly<Record<string, string>> = Object.freeze({
 let current: PublicState | undefined;
 let refreshGeneration = 0;
 let scheduledRefresh: number | undefined;
+let drainChips: Array<{ deadline: number; el: HTMLElement }> = [];
+let drainTicker: number | undefined;
+
+function startDrainTicker(): void {
+  if (drainTicker !== undefined) return;
+  drainTicker = window.setInterval(() => {
+    if (drainChips.length === 0) {
+      window.clearInterval(drainTicker);
+      drainTicker = undefined;
+      return;
+    }
+    for (const chip of drainChips) chip.el.textContent = countdownText(chip.deadline);
+  }, 1_000);
+}
 
 function setAppState(state: "booting" | "ready" | "error", error?: unknown): void {
   document.body.dataset["appState"] = state;
@@ -85,6 +106,14 @@ function sessionCard(record: ContainerView): HTMLElement {
   for (const text of policyChips(record)) {
     meta.append(node("span", { className: "popup-chip", text }));
   }
+  if (record.drainDeadline !== undefined) {
+    const drain = node("span", {
+      className: "popup-chip drain-chip",
+      text: countdownText(record.drainDeadline),
+    });
+    drainChips.push({ deadline: record.drainDeadline, el: drain });
+    meta.append(drain);
+  }
   card.append(meta);
   if (record.lastError)
     card.append(node("p", { className: "popup-error", text: record.lastError }));
@@ -116,6 +145,7 @@ function emptyState(title: string, detail: string): HTMLElement {
 
 function render(state: PublicState): void {
   current = state;
+  drainChips = [];
   const health = element<HTMLElement>("#health");
   health.textContent = state.health.summary;
   health.dataset["level"] = state.health.level;
@@ -145,6 +175,7 @@ function render(state: PublicState): void {
   } else {
     for (const entry of entries) recent.append(recentItem(entry));
   }
+  startDrainTicker();
 }
 
 async function refresh(showBoot = false): Promise<void> {
@@ -235,6 +266,10 @@ function bind(): void {
       browser.permissions.onAdded.removeListener(scheduleStateRefresh);
       browser.permissions.onRemoved.removeListener(scheduleStateRefresh);
       if (scheduledRefresh !== undefined) window.clearTimeout(scheduledRefresh);
+      if (drainTicker !== undefined) {
+        window.clearInterval(drainTicker);
+        drainTicker = undefined;
+      }
     },
     { once: true },
   );

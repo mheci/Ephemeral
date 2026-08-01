@@ -8,6 +8,7 @@ import type { LifecyclePolicy } from "../../src/core/types";
 
 const policy: LifecyclePolicy = {
   destroyOnLastTabClose: true,
+  graceSeconds: 0,
   destroyOnBrowserRestart: false,
   inactivity: { enabled: true, minutes: 30 },
 };

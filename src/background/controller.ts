@@ -3,6 +3,7 @@ import { randomId } from "../core/ids";
 import { inactivityDeadline, isInactive } from "../core/policy";
 import type {
   CleanupHistoryEntry,
+  ContainerRecord,
   ContainerView,
   DiagnosticsExport,
   HealthView,
@@ -99,6 +100,16 @@ export class Controller {
         record.cleanupAttempts < state.settings.retry.maxAttempts
       ) {
         await this.scheduler.scheduleRetry(record, state.settings);
+      } else if (record.status === "active" && record.drainDeadline !== undefined) {
+        if (this.now() >= record.drainDeadline) {
+          // A drain window that expired while the event page was suspended:
+          // settle it exactly as the alarm would have.
+          const tabs = await this.adapter.queryTabs(record.cookieStoreId);
+          if (tabs.length > 0) await this.clearDrain(record.id);
+          else await this.cleanup.request(record.id, "grace-expired");
+        } else {
+          await this.scheduler.scheduleDrain(record.id, record.drainDeadline);
+        }
       } else if (record.status === "active") {
         await this.scheduler.scheduleInactivity(record);
       }
@@ -221,8 +232,7 @@ export class Controller {
         const record = state.containers[knownContainerId];
         if (record?.status === "active" && record.policy.destroyOnLastTabClose) {
           const tabs = await this.adapter.queryTabs(record.cookieStoreId);
-          if (tabs.length === 0)
-            await this.cleanup.request(record.id, "last-tab-closed");
+          if (tabs.length === 0) await this.maybeDrain(record);
         }
         return;
       }
@@ -234,10 +244,45 @@ export class Controller {
         if (record.status !== "active" || !record.policy.destroyOnLastTabClose)
           continue;
         const tabs = await this.adapter.queryTabs(record.cookieStoreId);
-        if (tabs.length === 0) await this.cleanup.request(record.id, "last-tab-closed");
+        if (tabs.length === 0) await this.maybeDrain(record);
       }
     });
     await this.updateBadge();
+  }
+
+  /**
+   * Last-tab cleanup entry point. With a configured grace window the cleanup is
+   * deferred (drain): the container stays alive until the deadline so reopening
+   * a tab (or Firefox's "Undo Close Tab") cancels destruction.
+   */
+  private async maybeDrain(record: ContainerRecord): Promise<void> {
+    if (record.policy.graceSeconds <= 0) {
+      await this.cleanup.request(record.id, "last-tab-closed");
+      return;
+    }
+    const deadline = this.now() + record.policy.graceSeconds * 1_000;
+    await this.repository.transaction((draft) => {
+      const current = draft.containers[record.id];
+      if (!current) return;
+      current.drainDeadline = deadline;
+      delete current.lastError;
+    });
+    await this.scheduler.scheduleDrain(record.id, deadline);
+    await this.scheduler.cancelInactivity(record.id);
+  }
+
+  private async clearDrain(containerId: string): Promise<void> {
+    let record: ContainerRecord | undefined;
+    await this.repository.transaction((draft) => {
+      const current = draft.containers[containerId];
+      if (!current) return;
+      delete current.drainDeadline;
+      record = structuredClone(current);
+    });
+    if (record) {
+      await this.scheduler.cancelDrain(containerId);
+      await this.scheduler.scheduleInactivity(record);
+    }
   }
 
   public async onAlarm(name: string): Promise<void> {
@@ -266,6 +311,17 @@ export class Controller {
       }
     } else if (parsed.kind === "retry" && record.status !== "active") {
       await this.cleanup.request(record.id, "recovery");
+    } else if (parsed.kind === "drain") {
+      if (record.status !== "active" || record.drainDeadline === undefined) {
+        await this.scheduler.cancelDrain(record.id);
+      } else if (this.now() < record.drainDeadline) {
+        // Clock skew or an early wake; re-anchor the same deadline.
+        await this.scheduler.scheduleDrain(record.id, record.drainDeadline);
+      } else {
+        const tabs = await this.adapter.queryTabs(record.cookieStoreId);
+        if (tabs.length > 0) await this.clearDrain(record.id);
+        else await this.cleanup.request(record.id, "grace-expired");
+      }
     }
     await this.updateBadge();
   }
@@ -441,6 +497,7 @@ export class Controller {
       containers,
       cleanupHistory: state.cleanupHistory,
       health: this.health(containers),
+      lifetimeStats: state.lifetimeStats,
       capabilities: {
         downloadsPermission,
         supportedColors: capabilities.supportedColors,
@@ -473,6 +530,7 @@ export class Controller {
         ...(record.lastError === undefined ? {} : { lastError: record.lastError }),
       })),
       cleanupHistory: publicState.cleanupHistory,
+      lifetimeStats: publicState.lifetimeStats,
       apiLimitations: [...API_LIMITATIONS],
     };
     return JSON.stringify(diagnostics, null, 2);

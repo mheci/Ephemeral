@@ -52,6 +52,10 @@ Change shortcuts: Add-ons Manager → Gear → Manage Extension Shortcuts
 
 **Cleanup triggers:** Last tab closed, window closed, browser restart, inactivity timeout, manual Clean button, or context menu.
 
+**Undo close:** optionally set an "undo-close grace" per policy (0–600 seconds). After the last tab closes, cleanup waits – the popup and dashboard show a live countdown – and reopening the tab (or `Ctrl+Shift+T`) cancels the cleanup.
+
+**Lifetime stats:** the dashboard shows local-only counters (sessions cleaned, tabs closed, data types erased) that never leave your device.
+
 ## What Gets Erased
 
 | Data                                      | Result                       |

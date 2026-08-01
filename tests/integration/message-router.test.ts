@@ -58,6 +58,7 @@ describe("MessageRouter", () => {
           containerId: record!.id,
           policy: {
             destroyOnLastTabClose: true,
+            graceSeconds: 0,
             destroyOnBrowserRestart: false,
             inactivity: { enabled: false, minutes: 10 },
           },

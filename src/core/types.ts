@@ -4,6 +4,7 @@ export const SETTINGS_EXPORT_VERSION = 1 as const;
 export type ContainerKind = "one-time" | "reusable";
 export type CleanupTrigger =
   | "last-tab-closed"
+  | "grace-expired"
   | "browser-startup"
   | "inactivity"
   | "manual"
@@ -25,6 +26,8 @@ export type InactivityPolicy = {
 
 export type LifecyclePolicy = {
   destroyOnLastTabClose: boolean;
+  /** Seconds of "undo close" grace before last-tab cleanup; 0 = clean immediately. */
+  graceSeconds: number;
   destroyOnBrowserRestart: boolean;
   inactivity: InactivityPolicy;
 };
@@ -62,6 +65,8 @@ export type ContainerRecord = {
   createdBrowserSessionId: string;
   policy: LifecyclePolicy;
   status: ContainerStatus;
+  /** Deadline until which cleanup is deferred after the last tab closed (drain grace). */
+  drainDeadline?: number;
   pendingTrigger?: CleanupTrigger;
   cleanupAttempts: number;
   lastError?: string;
@@ -107,6 +112,17 @@ export type CleanupHistoryEntry = {
   error?: string;
 };
 
+/** Local-only lifetime counters. Never leaves the browser unless exported as diagnostics. */
+export type LifetimeStats = {
+  containersCreated: number;
+  containersCleaned: number;
+  cleanupsFailed: number;
+  /** Sum of container-scoped data types Firefox acknowledged erasing. */
+  dataTypesErased: number;
+  /** Sum of container tabs closed by Ephemeral cleanups. */
+  tabsClosed: number;
+};
+
 export type PersistedState = {
   schemaVersion: typeof STATE_SCHEMA_VERSION;
   revision: number;
@@ -114,6 +130,7 @@ export type PersistedState = {
   containers: Record<string, ContainerRecord>;
   creationIntents: Record<string, CreationIntent>;
   cleanupHistory: CleanupHistoryEntry[];
+  lifetimeStats: LifetimeStats;
 };
 
 export type ContainerView = ContainerRecord & {
@@ -134,6 +151,7 @@ export type PublicState = {
   containers: ContainerView[];
   cleanupHistory: CleanupHistoryEntry[];
   health: HealthView;
+  lifetimeStats: LifetimeStats;
   capabilities: {
     downloadsPermission: boolean;
     supportedColors: string[];
@@ -167,6 +185,7 @@ export type DiagnosticsExport = {
     lastError?: string;
   }>;
   cleanupHistory: CleanupHistoryEntry[];
+  lifetimeStats: LifetimeStats;
   apiLimitations: string[];
 };
 
