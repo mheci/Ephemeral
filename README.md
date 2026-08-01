@@ -12,7 +12,7 @@ Ephemeral creates temporary Firefox containers – isolated spaces for browsing.
 
 **How it functions:**
 
-1. Press `Ctrl+Shift+E` → new isolated tab opens
+1. Press `Ctrl+Alt+E` → new isolated tab opens
 2. Browse normally
 3. Close the tab → Firefox erases cookies, storage, cache for that container
 4. Nothing left behind
@@ -37,8 +37,8 @@ Firefox 153+ required.
 
 **Keyboard (fastest, invisible):**
 
-- `Ctrl+Shift+E` / `MacCtrl+Shift+E` – New ephemeral tab (auto-cleans)
-- `Ctrl+Shift+U` – New ephemeral space (stays open for many tabs)
+- `Ctrl+Alt+E` / `MacCtrl+Shift+E` – New ephemeral tab (auto-cleans)
+- `Ctrl+Alt+U` / `MacCtrl+Shift+U` – New ephemeral space (stays open for many tabs)
 - Assignable – New ephemeral window (dedicated window, cleans when closed)
 - `Ctrl+Shift+Period` – Open popup
 
