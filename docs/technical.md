@@ -37,13 +37,28 @@ A "new ephemeral window" is a dedicated browser window whose tabs all belong to 
 
 If every scoped data type is rejected, the identity stays for retry and the container is marked failed (never destroyed with unverifiable residue). Same-container work serialized via KeyedLock (bounded, timeout).
 
+## Drain Grace (Undo Close)
+
+When the last tab of a container closes and `destroyOnLastTabClose` is set, cleanup is deferred for `policy.graceSeconds` (0 = instant, current behavior; max 600 s):
+
+1. The record stores `drainDeadline` and a `ephemeral:drain:<id>` alarm is armed at that deadline; the inactivity alarm is disarmed so nothing double-cleans during the window.
+2. Reopening a tab (including Firefox's Ctrl+Shift+T "Undo Close Tab") fires `onTabActivity` → `touch` → clears `drainDeadline`, cancels the drain alarm, re-arms inactivity.
+3. When the alarm fires the controller re-checks tabs; if a tab raced back it clears the drain instead of cleaning. Otherwise cleanup runs with trigger `grace-expired` (same tab-recheck guard as `last-tab-closed`).
+4. Persisted `drainDeadline` survives event-page suspension: `recoverLifecycle` re-arms the alarm, or settles an expired window immediately (cleanup, or drain-clear if a tab exists).
+5. Changing a session policy re-anchors an active drain to the new grace value, or clears it when grace is disabled.
+6. The popup and dashboard show a live "cleans in Ns" countdown chip (1 s ticker, stopped when no drains exist).
+
+## Lifetime Privacy Stats
+
+Local-only counters in the persisted state (`lifetimeStats`), surfaced on the dashboard hero and in diagnostics exports: sessions created, sessions cleaned, failed cleanups, container-scoped data types Firefox acknowledged erasing, and tabs closed by cleanups. They are incremented only inside the same transaction that records the event, survive browser restarts, and are never sent anywhere. A missing or corrupted stats object in stored state resets to zeros without affecting managed containers.
+
 ## Recovery
 
 Records work before doing it. On startup:
 
 - Resume interrupted cleanup
 - Recover creation intents (match by expectedName + token)
-- Re-arm inactivity + retry alarms
+- Re-arm inactivity, drain, and retry alarms; settle expired drain windows
 - Reconcile externally removed identities
 - Repair invalid settings to defaults, preserve ownership
 
@@ -52,7 +67,7 @@ Unknown state schema: settings/history reset, parseable container records salvag
 ## Resource Use – Invisible
 
 - No polling, no content scripts, no network, no deps, no WASM
-- One inactivity alarm per container (when enabled), one retry per failed, one global recovery
+- One inactivity alarm per container (when enabled), one drain alarm per active undo-close window, one retry per failed, one global recovery
 - Bounded: history (50 default, 0-500), retries, locks (max 200 keys, auto-prune), timers, tabOwners (500 max, debounced session storage save)
 - Reverse index containerId→Set<tabId> for O(1) forget
 - Tab ownership persisted to storage.session to survive event-page restarts – avoids full scan fallback

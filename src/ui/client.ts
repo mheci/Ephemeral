@@ -89,6 +89,15 @@ export function relativeTime(timestamp: number, now = Date.now()): string {
   );
 }
 
+/** Live "cleans in 12s" text for drain-grace countdown chips. */
+export function countdownText(deadline: number, now = Date.now()): string {
+  const remaining = Math.max(0, Math.ceil((deadline - now) / 1_000));
+  if (remaining < 60) return `cleans in ${remaining}s`;
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  return seconds === 0 ? `cleans in ${minutes}m` : `cleans in ${minutes}m ${seconds}s`;
+}
+
 export function downloadText(filename: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
   const anchor = document.createElement("a");

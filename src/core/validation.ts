@@ -4,6 +4,7 @@ import { SETTINGS_EXPORT_VERSION, STATE_SCHEMA_VERSION } from "./types";
 
 const MAX_IMPORT_BYTES = 65_536;
 const MAX_INACTIVITY_MINUTES = 10_080;
+const MAX_GRACE_SECONDS = 600;
 const SAFE_NAME = /^[^\p{Cc}\p{Cf}]{1,30}$/u;
 const SAFE_STYLE_NAME = /^[a-z][a-z0-9-]{0,31}$/;
 const ALLOWED_SETTING_KEYS = new Set([
@@ -68,7 +69,7 @@ export function validateLifecyclePolicy(
   if (!isObject(value)) throw new ValidationError(`${at} must be an object`);
   assertOnlyKeys(
     value,
-    ["destroyOnLastTabClose", "destroyOnBrowserRestart", "inactivity"],
+    ["destroyOnLastTabClose", "graceSeconds", "destroyOnBrowserRestart", "inactivity"],
     at,
   );
   if (!isObject(value["inactivity"])) {
@@ -80,6 +81,15 @@ export function validateLifecyclePolicy(
       value["destroyOnLastTabClose"],
       `${at}.destroyOnLastTabClose`,
     ),
+    graceSeconds:
+      value["graceSeconds"] === undefined
+        ? 0
+        : numberInRange(
+            value["graceSeconds"],
+            0,
+            MAX_GRACE_SECONDS,
+            `${at}.graceSeconds`,
+          ),
     destroyOnBrowserRestart: boolean(
       value["destroyOnBrowserRestart"],
       `${at}.destroyOnBrowserRestart`,

@@ -11,6 +11,18 @@ async function state(): Promise<PublicState> {
   return controller.getPublicState();
 }
 
+async function withGrace(seconds: number): Promise<void> {
+  const initial = (await state()).settings;
+  await controller.updateSettings({
+    ...initial,
+    oneTimePolicy: { ...initial.oneTimePolicy, graceSeconds: seconds },
+  });
+}
+
+function drainAlarm(containerId: string): string {
+  return `ephemeral:drain:${containerId}`;
+}
+
 beforeEach(async () => {
   now = 1_700_000_000_000;
   adapter = new MockAdapter();
@@ -228,5 +240,175 @@ describe("container lifecycle integration", () => {
     const result = await state();
     expect(result.containers.map((item) => item.id)).toEqual([second!.id]);
     expect(adapter.identities.has(second!.cookieStoreId)).toBe(true);
+  });
+});
+
+describe("drain grace period", () => {
+  it("defers last-tab cleanup inside the undo-close window", async () => {
+    await withGrace(30);
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+
+    const draining = (await state()).containers[0];
+    expect(draining).toBeDefined();
+    expect(draining?.drainDeadline).toBe(now + 30_000);
+    expect(adapter.alarms.get(drainAlarm(created.id))).toBe(now + 30_000);
+    expect(adapter.alarms.has(`ephemeral:inactivity:${created.id}`)).toBe(false);
+    expect(adapter.siteDataRemovals).toHaveLength(0);
+    expect(adapter.identityRemovals).toHaveLength(0);
+  });
+
+  it("cleans up with a grace-expired trigger when the window ends", async () => {
+    await withGrace(30);
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+
+    now += 30_000;
+    await controller.onAlarm(drainAlarm(created.id));
+
+    const result = await state();
+    expect(result.containers).toHaveLength(0);
+    expect(result.cleanupHistory[0]?.trigger).toBe("grace-expired");
+    expect(adapter.siteDataRemovals).toEqual([created.cookieStoreId]);
+    expect(adapter.identityRemovals).toEqual([created.cookieStoreId]);
+  });
+
+  it("cancels the drain when a tab is reopened", async () => {
+    await withGrace(30);
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+    expect((await state()).containers[0]?.drainDeadline).toBe(now + 30_000);
+
+    const tabId = await adapter.createTab(created.cookieStoreId);
+    await controller.onTabActivity({ id: tabId, cookieStoreId: created.cookieStoreId });
+
+    const reopened = (await state()).containers[0]!;
+    expect(reopened.drainDeadline).toBeUndefined();
+    expect(adapter.alarms.has(drainAlarm(created.id))).toBe(false);
+    expect(reopened.tabCount).toBe(1);
+  });
+
+  it("rescues a container if a tab races the drain alarm", async () => {
+    await withGrace(30);
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+
+    // A tab appears without any activity event reaching the controller.
+    await adapter.createTab(created.cookieStoreId);
+    now += 60_000;
+    await controller.onAlarm(drainAlarm(created.id));
+
+    const result = await state();
+    expect(result.containers).toHaveLength(1);
+    expect(result.containers[0]?.drainDeadline).toBeUndefined();
+    expect(adapter.siteDataRemovals).toHaveLength(0);
+  });
+
+  it("resumes a pending drain window after an event-page restart", async () => {
+    await withGrace(60);
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+
+    const next = new Controller(adapter, () => now + 10_000);
+    await next.initialize();
+    expect((await next.getPublicState()).containers[0]?.drainDeadline).toBe(
+      now + 60_000,
+    );
+    expect(adapter.alarms.get(drainAlarm(created.id))).toBe(now + 60_000);
+    expect(adapter.siteDataRemovals).toHaveLength(0);
+  });
+
+  it("settles an expired drain window on startup without an alarm", async () => {
+    await withGrace(30);
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+
+    const next = new Controller(adapter, () => now + 60_000);
+    await next.initialize();
+    const result = await next.getPublicState();
+    expect(result.containers).toHaveLength(0);
+    expect(result.cleanupHistory[0]?.trigger).toBe("grace-expired");
+  });
+
+  it("ignores a grace window once the policy disables it", async () => {
+    await withGrace(30);
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+    expect((await state()).containers[0]?.drainDeadline).toBeDefined();
+
+    await controller.updateContainerPolicy(created.id, {
+      ...created.policy,
+      graceSeconds: 0,
+    });
+    expect((await state()).containers[0]?.drainDeadline).toBeUndefined();
+    expect(adapter.alarms.has(drainAlarm(created.id))).toBe(false);
+  });
+});
+
+describe("lifetime privacy stats", () => {
+  it("counts creations and completed cleanups with erased data types", async () => {
+    await controller.createContainer("one-time", true);
+    await controller.createContainer("reusable", true);
+    let stats = (await state()).lifetimeStats;
+    expect(stats.containersCreated).toBe(2);
+    expect(stats.containersCleaned).toBe(0);
+
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+
+    stats = (await state()).lifetimeStats;
+    expect(stats.containersCreated).toBe(2);
+    expect(stats.containersCleaned).toBe(1);
+    expect(stats.dataTypesErased).toBe(5);
+    expect(stats.cleanupsFailed).toBe(0);
+  });
+
+  it("counts closed tabs during manual cleanup", async () => {
+    await controller.createContainer("reusable", true);
+    const created = (await state()).containers[0]!;
+    await controller.openTab(created.id);
+    await controller.cleanupContainer(created.id);
+    expect((await state()).lifetimeStats.tabsClosed).toBe(2);
+  });
+
+  it("counts failed cleanups without counting them as cleaned", async () => {
+    await controller.createContainer("reusable", false);
+    const created = (await state()).containers[0]!;
+    adapter.failSiteData = true;
+    const report = await controller.cleanupContainer(created.id);
+    expect(report?.outcome).toBe("failed");
+    const stats = (await state()).lifetimeStats;
+    expect(stats.cleanupsFailed).toBe(1);
+    expect(stats.containersCleaned).toBe(0);
+  });
+
+  it("keeps counting after a browser restart", async () => {
+    await controller.createContainer("one-time", true);
+    const created = (await state()).containers[0]!;
+    adapter.removeTabsForStore(created.cookieStoreId);
+    await controller.onTabRemoved(99_001);
+
+    const next = new Controller(adapter, () => now + 1);
+    await next.initialize();
+    await next.createContainer("reusable", true);
+    const stats = (await next.getPublicState()).lifetimeStats;
+    expect(stats.containersCreated).toBe(2);
+    expect(stats.containersCleaned).toBe(1);
+    expect(stats.dataTypesErased).toBe(5);
   });
 });

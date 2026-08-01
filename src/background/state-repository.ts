@@ -4,6 +4,7 @@ import type {
   CleanupHistoryEntry,
   ContainerRecord,
   CreationIntent,
+  LifetimeStats,
   PersistedState,
 } from "../core/types";
 import { STATE_SCHEMA_VERSION } from "../core/types";
@@ -43,6 +44,12 @@ function validRecord(value: unknown): value is ContainerRecord {
   ) {
     return false;
   }
+  if (
+    value["drainDeadline"] !== undefined &&
+    !Number.isFinite(value["drainDeadline"])
+  ) {
+    return false;
+  }
   try {
     validateLifecyclePolicy(value["policy"]);
     return true;
@@ -73,6 +80,21 @@ function validHistory(value: unknown): value is CleanupHistoryEntry {
     Number.isFinite(value["finishedAt"]) &&
     Array.isArray(value["steps"]) &&
     Array.isArray(value["limitations"])
+  );
+}
+
+const STATS_FIELDS = [
+  "containersCreated",
+  "containersCleaned",
+  "cleanupsFailed",
+  "dataTypesErased",
+  "tabsClosed",
+] as const;
+
+function validLifetimeStats(value: unknown): value is LifetimeStats {
+  if (!isObject(value)) return false;
+  return STATS_FIELDS.every(
+    (field) => Number.isInteger(value[field]) && (value[field] as number) >= 0,
   );
 }
 
@@ -134,6 +156,12 @@ function recoverState(value: unknown): { state: PersistedState; repaired: boolea
       repaired = true;
     }
   } else if (value["cleanupHistory"] !== undefined) repaired = true;
+
+  if (validLifetimeStats(value["lifetimeStats"])) {
+    state.lifetimeStats = structuredClone(value["lifetimeStats"]);
+  } else if (value["lifetimeStats"] !== undefined) {
+    repaired = true;
+  }
 
   return { state, repaired };
 }

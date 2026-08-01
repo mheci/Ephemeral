@@ -64,7 +64,7 @@ export class CleanupEngine {
       const initial = state.containers[containerId];
       if (!initial) return undefined;
 
-      if (trigger === "last-tab-closed") {
+      if (trigger === "last-tab-closed" || trigger === "grace-expired") {
         const tabs = await this.adapter.queryTabs(initial.cookieStoreId);
         if (tabs.length > 0) {
           await this.restoreActive(initial.id);
@@ -122,7 +122,10 @@ export class CleanupEngine {
 
       let phaseStarted = this.now();
       const tabs = await this.adapter.queryTabs(record.cookieStoreId);
-      if (trigger === "last-tab-closed" && tabs.length > 0) {
+      if (
+        (trigger === "last-tab-closed" || trigger === "grace-expired") &&
+        tabs.length > 0
+      ) {
         steps.push(
           step(
             "close-tabs",
@@ -150,14 +153,15 @@ export class CleanupEngine {
           "TABS_REMAIN",
         );
       }
+      const tabsClosed = tabs.length;
       steps.push(
         step(
           "close-tabs",
           "succeeded",
           phaseStarted,
-          `Closed ${tabs.length} tab${tabs.length === 1 ? "" : "s"}.`,
+          `Closed ${tabsClosed} tab${tabsClosed === 1 ? "" : "s"}.`,
           this.now,
-          tabs.length,
+          tabsClosed,
         ),
       );
 
@@ -277,6 +281,7 @@ export class CleanupEngine {
         "completed-with-limitations",
         steps,
         limitations,
+        { tabsClosed, dataTypesErased: removal.acknowledgedTypes.length },
       );
     } catch (error) {
       return this.fail(record, trigger, startedAt, attempt, steps, limitations, error);
@@ -323,7 +328,8 @@ export class CleanupEngine {
   ): Promise<CleanupHistoryEntry> {
     const phaseStarted = this.now();
     const tabs = await this.adapter.queryTabs(record.cookieStoreId);
-    if (tabs.length > 0) await this.adapter.closeTabs(tabs.map((tab) => tab.id));
+    const tabsClosed = tabs.length;
+    if (tabsClosed > 0) await this.adapter.closeTabs(tabs.map((tab) => tab.id));
     steps.push(
       step(
         "remove-identity",
@@ -341,6 +347,7 @@ export class CleanupEngine {
       "completed-with-limitations",
       steps,
       limitations,
+      { tabsClosed, dataTypesErased: 0 },
     );
   }
 
@@ -351,10 +358,14 @@ export class CleanupEngine {
       if (!current) return;
       current.status = "active";
       delete current.pendingTrigger;
+      delete current.drainDeadline;
       delete current.lastError;
       record = structuredClone(current);
     });
-    if (record) await this.scheduler.scheduleInactivity(record);
+    if (record) {
+      await this.scheduler.cancelDrain(containerId);
+      await this.scheduler.scheduleInactivity(record);
+    }
   }
 
   private async recordCancelled(
@@ -384,6 +395,10 @@ export class CleanupEngine {
     outcome: CleanupOutcome,
     steps: CleanupStep[],
     limitations: string[],
+    deltas: { tabsClosed: number; dataTypesErased: number } = {
+      tabsClosed: 0,
+      dataTypesErased: 0,
+    },
   ): Promise<CleanupHistoryEntry> {
     const extensionStarted = this.now();
     const entry = this.makeHistory(
@@ -409,6 +424,9 @@ export class CleanupEngine {
     await this.repository.transaction((draft) => {
       delete draft.containers[record.id];
       draft.cleanupHistory.unshift(entry);
+      draft.lifetimeStats.containersCleaned += 1;
+      draft.lifetimeStats.tabsClosed += deltas.tabsClosed;
+      draft.lifetimeStats.dataTypesErased += deltas.dataTypesErased;
     });
     await this.scheduler.cancelForContainer(record.id);
     this.logger.info("Cleanup completed", { containerId: record.id, attempt, outcome });
@@ -505,6 +523,7 @@ export class CleanupEngine {
       current.cleanupAttempts = attempt;
       current.lastError = message;
       current.pendingTrigger = trigger;
+      draft.lifetimeStats.cleanupsFailed += 1;
     });
     const current = (await this.repository.snapshot()).containers[record.id];
     if (current && attempt < state.settings.retry.maxAttempts) {

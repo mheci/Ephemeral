@@ -96,6 +96,79 @@ describe("StateRepository", () => {
     expect(adapter.stored).toEqual(recovered);
   });
 
+  it("preserves valid lifetime stats and resets corrupted ones", async () => {
+    const adapter = new MockAdapter();
+    adapter.stored = {
+      ...createInitialState(),
+      lifetimeStats: {
+        containersCreated: 7,
+        containersCleaned: 5,
+        cleanupsFailed: 1,
+        dataTypesErased: 25,
+        tabsClosed: 9,
+      },
+    };
+    const preserved = await new StateRepository(adapter).initialize();
+    expect(preserved.lifetimeStats).toEqual({
+      containersCreated: 7,
+      containersCleaned: 5,
+      cleanupsFailed: 1,
+      dataTypesErased: 25,
+      tabsClosed: 9,
+    });
+
+    adapter.stored = {
+      ...createInitialState(),
+      lifetimeStats: { containersCreated: -1 },
+    };
+    const repaired = await new StateRepository(adapter).initialize();
+    expect(repaired.lifetimeStats).toEqual(createInitialState().lifetimeStats);
+    expect(adapter.stored).toEqual(repaired);
+  });
+
+  it("accepts records carrying an active drain deadline", async () => {
+    const adapter = new MockAdapter();
+    const draining = {
+      ...createInitialState().settings.reusablePolicy,
+    };
+    adapter.stored = {
+      ...createInitialState(),
+      containers: {
+        "container-1": {
+          id: "container-1",
+          operationToken: "ABC234",
+          cookieStoreId: "firefox-container-1",
+          name: "Ephemeral · ABC234",
+          kind: "reusable",
+          color: "blue",
+          icon: "circle",
+          createdAt: 1,
+          lastActivityAt: 1,
+          createdBrowserSessionId: "session-1",
+          policy: draining,
+          status: "active",
+          drainDeadline: 99_000,
+          cleanupAttempts: 0,
+        },
+      },
+    };
+    const recovered = await new StateRepository(adapter).initialize();
+    expect(recovered.containers["container-1"]?.drainDeadline).toBe(99_000);
+
+    adapter.stored = {
+      ...createInitialState(),
+      containers: {
+        "container-1": {
+          ...recovered.containers["container-1"]!,
+          drainDeadline: "soon",
+        },
+      },
+    };
+    expect(
+      (await new StateRepository(adapter).initialize()).containers["container-1"],
+    ).toBeUndefined();
+  });
+
   it("rejects a non-object persisted root", async () => {
     const adapter = new MockAdapter();
     adapter.stored = "corrupt";
