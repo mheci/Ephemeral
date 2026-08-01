@@ -199,6 +199,13 @@ function bind(): void {
       window.close();
     });
   });
+  const createWindow = element<HTMLButtonElement>("#create-window");
+  createWindow.addEventListener("click", () => {
+    void run(createWindow, async () => {
+      await send({ type: "CREATE_WINDOW", kind: "one-time" });
+      window.close();
+    });
+  });
   const cleanupAll = element<HTMLButtonElement>("#cleanup-all");
   cleanupAll.addEventListener("click", () => {
     if (!current || current.containers.length === 0) return;

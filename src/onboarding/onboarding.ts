@@ -82,7 +82,9 @@ function bind(): void {
     } else if (event.key === "ArrowLeft") {
       if (currentStep > 1) showStep(currentStep - 1);
     } else if (event.key === "Escape") {
-      void browser.storage.local.set({ onboardingCompleted: true }).then(() => window.close());
+      void browser.storage.local
+        .set({ onboardingCompleted: true })
+        .then(() => window.close());
     }
   });
 }

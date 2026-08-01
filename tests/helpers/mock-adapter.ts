@@ -3,6 +3,7 @@ import type {
   BrowserIdentity,
   BrowserTab,
   DownloadEraseResult,
+  SiteDataRemoval,
 } from "../../src/background/browser-adapter";
 
 export class MockAdapter implements BrowserAdapter {
@@ -18,12 +19,16 @@ export class MockAdapter implements BrowserAdapter {
   public downloadsPermission = false;
   public badge = { text: "", color: "" };
   public failSiteData = false;
+  /** Types that Firefox rejects; remaining types are acknowledged. */
+  public failSiteDataTypes: string[] = [];
   public failIdentityRemoval = false;
   public failTabCreation = false;
+  public failWindowCreation = false;
   public failDownloads = false;
   public failBadge = false;
   public failTabQueries = false;
   public loadFailuresRemaining = 0;
+  public windowCreates: Array<{ cookieStoreId: string; url: string }> = [];
   private identitySequence = 0;
   private tabSequence = 0;
 
@@ -109,13 +114,36 @@ export class MockAdapter implements BrowserAdapter {
     return id;
   }
 
+  public async createWindow(cookieStoreId: string, url: string): Promise<number> {
+    if (this.failWindowCreation) throw new Error("simulated window creation failure");
+    if (!this.identities.has(cookieStoreId))
+      throw new Error("Container does not exist");
+    this.windowCreates.push({ cookieStoreId, url });
+    const id = ++this.tabSequence;
+    this.tabs.set(id, { id, cookieStoreId });
+    return id;
+  }
+
   public async closeTabs(tabIds: number[]): Promise<void> {
     for (const id of tabIds) this.tabs.delete(id);
   }
 
-  public async removeScopedSiteData(cookieStoreId: string): Promise<void> {
+  public async removeScopedSiteData(cookieStoreId: string): Promise<SiteDataRemoval> {
     if (this.failSiteData) throw new Error("simulated browsingData failure");
     this.siteDataRemovals.push(cookieStoreId);
+    const acknowledgedTypes: string[] = [];
+    const failedTypes: string[] = [];
+    for (const type of [
+      "cookies",
+      "indexedDB",
+      "localStorage",
+      "cacheStorage",
+      "serviceWorkers",
+    ] as const) {
+      if (this.failSiteDataTypes.includes(type)) failedTypes.push(type);
+      else acknowledgedTypes.push(type);
+    }
+    return { acknowledgedTypes, failedTypes };
   }
 
   public async hasDownloadsPermission(): Promise<boolean> {

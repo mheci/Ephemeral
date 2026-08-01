@@ -44,10 +44,20 @@ function createContextMenus(): void {
         title: "Open link in new ephemeral space",
         contexts: ["link"],
       });
+      browser.menus.create({
+        id: "open-link-ephemeral-window",
+        title: "Open link in new ephemeral window",
+        contexts: ["link"],
+      });
       // Page context: open current page in ephemeral
       browser.menus.create({
         id: "open-page-ephemeral-tab",
         title: "Open this page in new ephemeral tab",
+        contexts: ["page"],
+      });
+      browser.menus.create({
+        id: "open-page-ephemeral-window",
+        title: "Open this page in new ephemeral window",
         contexts: ["page"],
       });
     });
@@ -62,9 +72,10 @@ function maybeOpenOnboarding(reason: string): void {
   if (reason !== "install") return;
   void (async () => {
     try {
-      const stored = (await browser.storage.local.get(
-        "onboardingCompleted",
-      )) as Record<string, unknown>;
+      const stored = (await browser.storage.local.get("onboardingCompleted")) as Record<
+        string,
+        unknown
+      >;
       if (stored["onboardingCompleted"]) return;
       await browser.tabs.create({
         url: browser.runtime.getURL("onboarding/index.html"),
@@ -127,6 +138,8 @@ if (browser.commands?.onCommand) {
         controller.createContainer("reusable", true),
         "command-open-ephemeral-space",
       );
+    } else if (command === "open-ephemeral-window") {
+      report(controller.createWindow("one-time"), "command-open-ephemeral-window");
     }
     // _execute_action is handled by Firefox opening the popup
   });
@@ -144,18 +157,25 @@ if (browser.menus?.onClicked) {
         controller.createContainerWithUrl("one-time", info.linkUrl, true),
         "menu-open-link-ephemeral-tab",
       );
-    } else if (
-      info.menuItemId === "open-link-ephemeral-space" &&
-      info.linkUrl
-    ) {
+    } else if (info.menuItemId === "open-link-ephemeral-space" && info.linkUrl) {
       report(
         controller.createContainerWithUrl("reusable", info.linkUrl, true),
         "menu-open-link-ephemeral-space",
+      );
+    } else if (info.menuItemId === "open-link-ephemeral-window" && info.linkUrl) {
+      report(
+        controller.createWindow("one-time", info.linkUrl),
+        "menu-open-link-ephemeral-window",
       );
     } else if (info.menuItemId === "open-page-ephemeral-tab" && info.pageUrl) {
       report(
         controller.createContainerWithUrl("one-time", info.pageUrl, true),
         "menu-open-page-ephemeral-tab",
+      );
+    } else if (info.menuItemId === "open-page-ephemeral-window" && info.pageUrl) {
+      report(
+        controller.createWindow("one-time", info.pageUrl),
+        "menu-open-page-ephemeral-window",
       );
     }
   });

@@ -79,22 +79,26 @@ function validHistory(value: unknown): value is CleanupHistoryEntry {
 function recoverState(value: unknown): { state: PersistedState; repaired: boolean } {
   if (value === undefined) return { state: createInitialState(), repaired: true };
   if (!isObject(value)) throw new Error("Persisted state root is not an object");
-  if (value["schemaVersion"] !== STATE_SCHEMA_VERSION) {
-    throw new Error(
-      `Unsupported persisted state schema: ${String(value["schemaVersion"])}`,
-    );
-  }
   const state = createInitialState();
   let repaired = false;
-  if (Number.isInteger(value["revision"])) state.revision = value["revision"] as number;
-  else repaired = true;
-
-  try {
-    state.settings = validateSettings(value["settings"]);
-  } catch {
-    // Settings corruption must not hide managed identities. Defaults are safe to
-    // restore while valid ownership records below remain available for cleanup.
+  if (value["schemaVersion"] !== STATE_SCHEMA_VERSION) {
+    // Unknown schema (older or newer release). Never brick the extension over
+    // it: reset settings and history, but salvage any ownership records that
+    // are still parseable so managed identities remain tracked and can still
+    // be cleaned up, then resave under the current schema.
     repaired = true;
+  } else {
+    if (Number.isInteger(value["revision"]))
+      state.revision = value["revision"] as number;
+    else repaired = true;
+
+    try {
+      state.settings = validateSettings(value["settings"]);
+    } catch {
+      // Settings corruption must not hide managed identities. Defaults are safe to
+      // restore while valid ownership records below remain available for cleanup.
+      repaired = true;
+    }
   }
 
   if (isObject(value["containers"])) {
