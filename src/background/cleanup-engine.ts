@@ -234,6 +234,37 @@ export class CleanupEngine {
       }
 
       phaseStarted = this.now();
+      if (!state.settings.cleanup.sweepGlobalHistory) {
+        steps.push(
+          step(
+            "history-sweep",
+            "skipped",
+            phaseStarted,
+            "Global history sweep is disabled.",
+            this.now,
+          ),
+        );
+      } else {
+        try {
+          await this.adapter.sweepGlobalHistory();
+          steps.push(
+            step(
+              "history-sweep",
+              "succeeded",
+              phaseStarted,
+              "Erased Firefox's entire browsing history (global opt-in sweep).",
+              this.now,
+            ),
+          );
+        } catch {
+          const detail =
+            "Firefox rejected the global history sweep; container-scoped cleanup still completed.";
+          steps.push(step("history-sweep", "limited", phaseStarted, detail, this.now));
+          limitations.push(detail);
+        }
+      }
+
+      phaseStarted = this.now();
       this.removingStores.add(record.cookieStoreId);
       try {
         await this.adapter.removeIdentity(record.cookieStoreId);

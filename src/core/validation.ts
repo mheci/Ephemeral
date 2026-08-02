@@ -151,7 +151,11 @@ export function validateSettings(value: unknown): Settings {
   }
   if (!isObject(value["cleanup"]))
     throw new ValidationError("settings.cleanup must be an object");
-  assertOnlyKeys(value["cleanup"], ["eraseDownloadMetadata"], "settings.cleanup");
+  assertOnlyKeys(
+    value["cleanup"],
+    ["eraseDownloadMetadata", "sweepGlobalHistory"],
+    "settings.cleanup",
+  );
   if (!isObject(value["retry"]))
     throw new ValidationError("settings.retry must be an object");
   assertOnlyKeys(value["retry"], ["maxAttempts", "delaysMinutes"], "settings.retry");
@@ -192,6 +196,13 @@ export function validateSettings(value: unknown): Settings {
         value["cleanup"]["eraseDownloadMetadata"],
         "settings.cleanup.eraseDownloadMetadata",
       ),
+      sweepGlobalHistory:
+        value["cleanup"]["sweepGlobalHistory"] === undefined
+          ? false
+          : boolean(
+              value["cleanup"]["sweepGlobalHistory"],
+              "settings.cleanup.sweepGlobalHistory",
+            ),
     },
     retry: { maxAttempts, delaysMinutes },
     cleanupHistoryLimit: numberInRange(

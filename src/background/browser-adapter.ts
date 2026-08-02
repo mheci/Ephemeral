@@ -47,6 +47,8 @@ export type BrowserAdapter = {
   requestDownloadsPermission(): Promise<boolean>;
   removeDownloadsPermission(): Promise<boolean>;
   eraseDownloadMetadata(cookieStoreId: string): Promise<DownloadEraseResult>;
+  /** Erase the entire Firefox browsing history. Global-only in Firefox; never scoped. */
+  sweepGlobalHistory(): Promise<void>;
   scheduleAlarm(name: string, when: number): Promise<void>;
   cancelAlarm(name: string): Promise<void>;
   setBadge(text: string, color: string): Promise<void>;

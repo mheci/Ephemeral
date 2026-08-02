@@ -34,6 +34,9 @@ export type LifecyclePolicy = {
 
 export type CleanupPolicy = {
   eraseDownloadMetadata: boolean;
+  /** Opt-in: erase the ENTIRE Firefox browsing history on every container cleanup.
+   * Firefox has no container-scoped history API, so this is global, never scoped. */
+  sweepGlobalHistory: boolean;
 };
 
 export type RetryPolicy = {
@@ -87,6 +90,7 @@ export type CleanupStep = {
     | "close-tabs"
     | "scoped-site-data"
     | "download-metadata"
+    | "history-sweep"
     | "remove-identity"
     | "extension-state"
     | "verification"

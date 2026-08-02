@@ -237,6 +237,14 @@ export class FirefoxAdapter implements BrowserAdapter {
     return { erasedIds, remaining: remainingItems.length };
   }
 
+  public async sweepGlobalHistory(): Promise<void> {
+    // Firefox has no container-scoped history API: history lives in a global
+    // Places database with no cookieStoreId attribute. Erasing it therefore
+    // removes the ENTIRE browser history. Ephemeral only calls this when the
+    // user explicitly opted in, and the cleanup report labels it as global.
+    await browser.browsingData.remove({ since: 0 }, { history: true });
+  }
+
   public async scheduleAlarm(name: string, when: number): Promise<void> {
     await browser.alarms.create(name, { when });
   }
