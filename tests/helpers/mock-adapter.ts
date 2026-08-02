@@ -25,6 +25,8 @@ export class MockAdapter implements BrowserAdapter {
   public failTabCreation = false;
   public failWindowCreation = false;
   public failDownloads = false;
+  public failHistorySweep = false;
+  public historySweeps = 0;
   public failBadge = false;
   public failTabQueries = false;
   public loadFailuresRemaining = 0;
@@ -167,6 +169,12 @@ export class MockAdapter implements BrowserAdapter {
     const erasedIds = this.downloadEntries.get(cookieStoreId) ?? [];
     this.downloadEntries.delete(cookieStoreId);
     return { erasedIds, remaining: 0 };
+  }
+
+  public async sweepGlobalHistory(): Promise<void> {
+    if (this.failHistorySweep)
+      throw new Error("simulated global history sweep failure");
+    this.historySweeps += 1;
   }
 
   public async scheduleAlarm(name: string, when: number): Promise<void> {

@@ -120,6 +120,45 @@ describe("container lifecycle integration", () => {
     expect(downloadStep?.affectedItems).toBe(2);
   });
 
+  it("sweeps the global browsing history only when opted in", async () => {
+    await controller.createContainer("reusable", false);
+    const created = (await state()).containers[0]!;
+    let report = await controller.cleanupContainer(created.id);
+    expect(report?.steps.find((item) => item.name === "history-sweep")?.outcome).toBe(
+      "skipped",
+    );
+    expect(adapter.historySweeps).toBe(0);
+
+    const initial = (await state()).settings;
+    await controller.updateSettings({
+      ...initial,
+      cleanup: { ...initial.cleanup, sweepGlobalHistory: true },
+    });
+    await controller.createContainer("reusable", false);
+    const second = (await state()).containers[0]!;
+    report = await controller.cleanupContainer(second.id);
+    const sweepStep = report?.steps.find((item) => item.name === "history-sweep");
+    expect(sweepStep?.outcome).toBe("succeeded");
+    expect(adapter.historySweeps).toBe(1);
+  });
+
+  it("reports a failed global history sweep as a limitation without failing cleanup", async () => {
+    const initial = (await state()).settings;
+    await controller.updateSettings({
+      ...initial,
+      cleanup: { ...initial.cleanup, sweepGlobalHistory: true },
+    });
+    await controller.createContainer("reusable", false);
+    const created = (await state()).containers[0]!;
+    adapter.failHistorySweep = true;
+    const report = await controller.cleanupContainer(created.id);
+    expect(report?.outcome).toBe("completed-with-limitations");
+    expect(report?.steps.find((item) => item.name === "history-sweep")?.outcome).toBe(
+      "limited",
+    );
+    expect((await state()).containers).toHaveLength(0);
+  });
+
   it("recovers browser-exit policy on the next startup", async () => {
     adapter.sessionId = "old-session";
     controller = new Controller(adapter, () => now);

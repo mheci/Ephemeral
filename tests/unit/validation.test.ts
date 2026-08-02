@@ -83,6 +83,26 @@ describe("settings validation", () => {
     ).toBe(30);
   });
 
+  it("defaults a missing history sweep to off and rejects non-boolean values", () => {
+    const settings = createDefaultSettings();
+    const legacy = {
+      ...settings.cleanup,
+    } as Partial<typeof settings.cleanup>;
+    delete legacy.sweepGlobalHistory;
+    expect(
+      validateSettings({ ...settings, cleanup: legacy }).cleanup.sweepGlobalHistory,
+    ).toBe(false);
+
+    const explicit = createDefaultSettings();
+    explicit.cleanup.sweepGlobalHistory = true;
+    expect(validateSettings(explicit).cleanup.sweepGlobalHistory).toBe(true);
+
+    const invalid = createDefaultSettings();
+    (invalid.cleanup as unknown as { sweepGlobalHistory: unknown }).sweepGlobalHistory =
+      "yes";
+    expect(() => validateSettings(invalid)).toThrow(/sweepGlobalHistory/);
+  });
+
   it.each([
     null,
     {},

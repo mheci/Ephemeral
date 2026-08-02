@@ -58,15 +58,16 @@ Change shortcuts: Add-ons Manager → Gear → Manage Extension Shortcuts
 
 ## What Gets Erased
 
-| Data                                      | Result                       |
-| ----------------------------------------- | ---------------------------- |
-| Cookies, IndexedDB, local/session storage | Removed for that container   |
-| Cache Storage, Service Workers            | Removed for that container   |
-| Tabs & container identity                 | Closed & removed             |
-| Download history                          | Optional, files stay on disk |
-| Extension state                           | Removed after cleanup        |
+| Data                                      | Result                                |
+| ----------------------------------------- | ------------------------------------- |
+| Cookies, IndexedDB, local/session storage | Removed for that container            |
+| Cache Storage, Service Workers            | Removed for that container            |
+| Tabs & container identity                 | Closed & removed                      |
+| Download history                          | Optional, files stay on disk          |
+| Browsing history                          | Optional global sweep, off by default |
+| Extension state                           | Removed after cleanup                 |
 
-Container-scoped removal works for cookies, IndexedDB, local/session storage, cache storage, and service workers – each attempted individually and reported honestly when Firefox rejects a type. Firefox does NOT allow container-scoped removal of history, HTTP cache, passwords, form data, permissions, HSTS/TLS state, DNS, or download history – we never delete global data as substitute.
+Container-scoped removal works for cookies, IndexedDB, local/session storage, cache storage, and service workers – each attempted individually and reported honestly when Firefox rejects a type. Firefox does NOT allow container-scoped removal of history, HTTP cache, passwords, form data, permissions, HSTS/TLS state, DNS, or download history – we never delete global data as a silent substitute. If you opt in, the global history sweep erases the entire Firefox browsing history (including non-container sites) whenever a container is cleaned; the cleanup report always labels that step as global.
 
 ## Privacy
 

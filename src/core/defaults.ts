@@ -17,7 +17,10 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
     destroyOnBrowserRestart: true,
     inactivity: Object.freeze({ enabled: true, minutes: 30 }),
   }),
-  cleanup: Object.freeze({ eraseDownloadMetadata: false }),
+  cleanup: Object.freeze({
+    eraseDownloadMetadata: false,
+    sweepGlobalHistory: false,
+  }),
   retry: Object.freeze({
     maxAttempts: 5,
     delaysMinutes: Object.freeze([1, 5, 15, 60, 240]) as unknown as number[],
@@ -48,7 +51,7 @@ export function createInitialState(): PersistedState {
 }
 
 export const API_LIMITATIONS = Object.freeze([
-  "Firefox exposes no container-scoped API for browsing history; Ephemeral never deletes global history.",
+  "Firefox exposes no container-scoped API for browsing history; Ephemeral erases global history only when the opt-in sweep is enabled.",
   "The HTTP cache is global and has no container-scoped removal API; Ephemeral never deletes the global cache.",
   "Saved passwords, form history, site permissions, HSTS, TLS state, DNS state, and physical download files are not container-scoped WebExtension data.",
   "A WebExtension cannot guarantee work during Firefox shutdown; browser-exit cleanup runs on the next Firefox startup.",
