@@ -96,6 +96,7 @@ function renderSettings(state: PublicState): void {
   input("start-url").value = state.settings.startUrl;
   input("history-limit").value = String(state.settings.cleanupHistoryLimit);
   input("download-metadata").checked = state.settings.cleanup.eraseDownloadMetadata;
+  input("sweep-global-history").checked = state.settings.cleanup.sweepGlobalHistory;
   setPolicy("once", state.settings.oneTimePolicy);
   setPolicy("reuse", state.settings.reusablePolicy);
 
@@ -459,7 +460,10 @@ function readSettings(): Settings {
     startUrl: input("start-url").value,
     oneTimePolicy: readPolicy("once"),
     reusablePolicy: readPolicy("reuse"),
-    cleanup: { eraseDownloadMetadata: input("download-metadata").checked },
+    cleanup: {
+      eraseDownloadMetadata: input("download-metadata").checked,
+      sweepGlobalHistory: input("sweep-global-history").checked,
+    },
     cleanupHistoryLimit: Number(input("history-limit").value),
   };
 }
@@ -524,7 +528,7 @@ function bind(): void {
             type: "UPDATE_SETTINGS",
             settings: {
               ...current.settings,
-              cleanup: { eraseDownloadMetadata: enabled },
+              cleanup: { ...current.settings.cleanup, eraseDownloadMetadata: enabled },
             },
           });
         }
@@ -551,7 +555,10 @@ function bind(): void {
       if (current) {
         await send({
           type: "UPDATE_SETTINGS",
-          settings: { ...current.settings, cleanup: { eraseDownloadMetadata: false } },
+          settings: {
+            ...current.settings,
+            cleanup: { ...current.settings.cleanup, eraseDownloadMetadata: false },
+          },
         });
       }
       notify("Downloads permission revoked.");

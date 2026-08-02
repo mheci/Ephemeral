@@ -35,6 +35,10 @@ Settings/diagnostics created locally, nothing uploaded. Review before sharing �
 
 Optional. Only erases download-history entries filtered by container ID. Never deletes files.
 
+## Global History Sweep
+
+Optional, off by default. Firefox has no container-scoped history API, so this erases the ENTIRE Firefox browsing history – including sites visited outside containers – every time a container is cleaned. The cleanup report labels the `history-sweep` step as global. Enable only if you want history erased browser-wide alongside container cleanup.
+
 ## Uninstall
 
 Clean all first. Firefox has no reliable uninstall event for async cleanup.

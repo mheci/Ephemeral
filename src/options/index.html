@@ -365,6 +365,29 @@
                 </button>
               </div>
               <hr />
+              <div class="permission-row">
+                <div class="permission-copy">
+                  <span class="permission-icon" aria-hidden="true">⌫</span>
+                  <div>
+                    <h3>Global browsing history</h3>
+                    <p>
+                      Firefox offers no way to erase history for one container only.
+                      When enabled, Ephemeral erases the
+                      <strong>entire Firefox browsing history</strong> – including sites
+                      visited outside containers – every time any container is cleaned.
+                      Off by default.
+                    </p>
+                  </div>
+                </div>
+                <label class="switch"
+                  ><input id="sweep-global-history" type="checkbox" /><span
+                    class="switch-track"
+                    aria-hidden="true"
+                  ></span
+                  ><span class="switch-label">Enable</span></label
+                >
+              </div>
+              <hr />
               <div class="retention-row">
                 <label class="field inline"
                   ><span>Cleanup records retained</span
@@ -476,7 +499,7 @@
               <article class="panel limit-card unavailable">
                 <h3><span aria-hidden="true">—</span> Not safely container scoped</h3>
                 <ul>
-                  <li>Browsing history</li>
+                  <li>Browsing history (global opt-in sweep only)</li>
                   <li>HTTP cache</li>
                   <li>Passwords and site permissions</li>
                   <li>Network security state and downloaded files</li>

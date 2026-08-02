@@ -31,9 +31,10 @@ A "new ephemeral window" is a dedicated browser window whose tabs all belong to 
 3. Close tabs, confirm closed
 4. Remove scoped site data: cookies, indexedDB, localStorage (batched, falling back per type), then cacheStorage, serviceWorkers – each type's success is recorded individually; the report lists exactly which types Firefox accepted and which it rejected
 5. Optional download-history erase (if permission)
-6. Remove identity
-7. Verify identity + tabs gone
-8. Remove extension state, append bounded report
+6. Optional global history sweep (`sweepGlobalHistory`, default off): erases the ENTIRE Firefox history via `browsingData.remove({since:0},{history:true})` – Firefox has no container-scoped history API (Places is global). Reported as a `history-sweep` step and labeled global. A rejection degrades the step to `limited`; it never fails container cleanup.
+7. Remove identity
+8. Verify identity + tabs gone
+9. Remove extension state, append bounded report
 
 If every scoped data type is rejected, the identity stays for retry and the container is marked failed (never destroyed with unverifiable residue). Same-container work serialized via KeyedLock (bounded, timeout).
 
@@ -119,6 +120,6 @@ Local checks: `npm run check` (format, lint, typecheck, docs:check, secrets:audi
 
 Container-scoped via `cookieStoreId`: cookies, indexedDB, localStorage, cacheStorage, serviceWorkers. Each type is attempted individually, and the cleanup report names exactly which types Firefox accepted or rejected on that run (a partially accepted removal is reported as `completed-with-limitations`, a fully rejected one fails the container for retry). Download history filterable if optional permission granted.
 
-Not safely container-scoped: history, HTTP cache, passwords, form data, permissions, HSTS, TLS, DNS, downloaded files, bookmarks. Ephemeral never deletes global data as substitute.
+Not safely container-scoped: history, HTTP cache, passwords, form data, permissions, HSTS, TLS, DNS, downloaded files, bookmarks. Ephemeral never deletes global data as a silent substitute. The one opt-in exception is `sweepGlobalHistory`: Firefox cannot scope history removal to a container, so when enabled, every container cleanup additionally erases the entire global browsing history and the cleanup report labels the `history-sweep` step as global.
 
 Browser-exit cleanup runs on next startup (extensions cannot block shutdown).
