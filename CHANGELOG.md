@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/mheci/Ephemeral/compare/v2.1.0...v2.2.0) (2026-08-02)
+
+
+### Features
+
+* add opt-in global browsing history sweep ([#14](https://github.com/mheci/Ephemeral/issues/14)) ([2e41841](https://github.com/mheci/Ephemeral/commit/2e418419137d5ca674db203bd4de0464dd864cfe))
+
 ## [2.1.0](https://github.com/mheci/Ephemeral/compare/v2.0.1...v2.1.0) (2026-08-01)
 
 
