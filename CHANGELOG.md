@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/mheci/Ephemeral/compare/v2.2.0...v2.3.0) (2026-08-05)
+
+
+### Features
+
+* redesign and modernize the extension popup ([#17](https://github.com/mheci/Ephemeral/issues/17)) ([fa2acce](https://github.com/mheci/Ephemeral/commit/fa2accebbc5126d2e3379c95f6058a87c25c1ddf))
+
 ## [2.2.0](https://github.com/mheci/Ephemeral/compare/v2.1.0...v2.2.0) (2026-08-02)
 
 
