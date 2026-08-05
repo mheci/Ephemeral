@@ -6,11 +6,14 @@ export function randomId(prefix: string): string {
 
 export function randomToken(length = 6): string {
   const size = TOKEN_ALPHABET.length;
-  const values = crypto.getRandomValues(new Uint32Array(length));
+  const limit = 256 - (256 % size);
+  const buffer = new Uint8Array(1);
   let token = "";
-  for (const value of values) {
-    const index = Math.floor((value / 0x1_0000_0000) * size);
-    token += TOKEN_ALPHABET[index] ?? "A";
+  while (token.length < length) {
+    crypto.getRandomValues(buffer);
+    const value = buffer[0];
+    if (value === undefined || value >= limit) continue;
+    token += TOKEN_ALPHABET[value % size] ?? "A";
   }
   return token;
 }
