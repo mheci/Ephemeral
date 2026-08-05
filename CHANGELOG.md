@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/mheci/Ephemeral/compare/v2.3.0...v2.3.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* unbiased token generation; simplify popup ([#19](https://github.com/mheci/Ephemeral/issues/19)) ([c85128b](https://github.com/mheci/Ephemeral/commit/c85128bfca745186e2aaaf8dd0d8d79c414a1a0f))
+
 ## [2.3.0](https://github.com/mheci/Ephemeral/compare/v2.2.0...v2.3.0) (2026-08-05)
 
 
