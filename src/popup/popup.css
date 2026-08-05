@@ -98,7 +98,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 12px 16px 0;
+  padding: 12px 16px 14px;
   overflow: hidden;
   transition: opacity 150ms ease;
 }
@@ -171,21 +171,17 @@
   display: grid;
   gap: 8px;
 }
+.popup-section-title {
+  margin: 0;
+  font-size: 12px;
+}
 .popup-section-heading {
   margin-bottom: 8px;
 }
 .popup-section-heading.row {
   display: flex;
   justify-content: space-between;
-  align-items: end;
-}
-.popup-section-heading .eyebrow {
-  margin: 0 0 2px;
-  color: var(--accent);
-  font-size: 8px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
+  align-items: center;
 }
 .popup-section-heading h2 {
   margin: 0;
@@ -413,26 +409,17 @@
 }
 
 .popup-empty {
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 4px;
-  padding: 18px 12px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 16px 12px;
   border: 1px dashed var(--border);
   border-radius: var(--radius);
   color: var(--muted);
   text-align: center;
-}
-.popup-empty span {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  margin-bottom: 2px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 14px;
 }
 .popup-empty strong {
   color: var(--text);
@@ -440,48 +427,6 @@
 }
 .popup-empty small {
   font-size: 9px;
-}
-
-.recent-section {
-  flex: none;
-  padding-bottom: 12px;
-}
-.recent-list {
-  display: grid;
-}
-.recent-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 1px;
-  border-top: 1px solid var(--border);
-  font-size: 10px;
-}
-.recent-item:first-child {
-  border-top: 0;
-}
-.recent-item > span:nth-child(2) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.recent-item small {
-  color: var(--muted);
-  font-size: 9px;
-  white-space: nowrap;
-}
-.outcome-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--success);
-}
-.outcome-dot.failed {
-  background: var(--danger);
-}
-.outcome-dot.limited {
-  background: var(--warning);
 }
 
 .popup-skeleton {
@@ -495,9 +440,6 @@
   );
   background-size: 200% 100%;
   animation: popup-shimmer 1.2s infinite;
-}
-.popup-skeleton.short {
-  height: 36px;
 }
 @keyframes popup-shimmer {
   to {

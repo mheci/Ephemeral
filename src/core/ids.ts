@@ -5,10 +5,16 @@ export function randomId(prefix: string): string {
 }
 
 export function randomToken(length = 6): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  const size = TOKEN_ALPHABET.length;
+  const limit = 256 - (256 % size);
+  const buffer = new Uint8Array(1);
   let token = "";
-  for (const byte of bytes)
-    token += TOKEN_ALPHABET[byte % TOKEN_ALPHABET.length] ?? "A";
+  while (token.length < length) {
+    crypto.getRandomValues(buffer);
+    const value = buffer[0];
+    if (value === undefined || value >= limit) continue;
+    token += TOKEN_ALPHABET[value % size] ?? "A";
+  }
   return token;
 }
 
