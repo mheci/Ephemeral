@@ -5,10 +5,13 @@ export function randomId(prefix: string): string {
 }
 
 export function randomToken(length = 6): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  const size = TOKEN_ALPHABET.length;
+  const values = crypto.getRandomValues(new Uint32Array(length));
   let token = "";
-  for (const byte of bytes)
-    token += TOKEN_ALPHABET[byte % TOKEN_ALPHABET.length] ?? "A";
+  for (const value of values) {
+    const index = Math.floor((value / 0x1_0000_0000) * size);
+    token += TOKEN_ALPHABET[index] ?? "A";
+  }
   return token;
 }
 
