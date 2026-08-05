@@ -1,12 +1,5 @@
-import type { CleanupHistoryEntry, ContainerView, PublicState } from "../core/types";
-import {
-  countdownText,
-  errorText,
-  formatDuration,
-  relativeTime,
-  send,
-  setBusy,
-} from "../ui/client";
+import type { ContainerView, PublicState } from "../core/types";
+import { countdownText, errorText, relativeTime, send, setBusy } from "../ui/client";
 import { clear, element, node } from "../ui/dom";
 import { notify } from "../ui/notifications";
 
@@ -130,26 +123,9 @@ function sessionCard(record: ContainerView): HTMLElement {
   return card;
 }
 
-function recentItem(entry: CleanupHistoryEntry): HTMLElement {
-  const item = node("div", { className: "recent-item" });
-  const outcomeClass = entry.outcome === "failed" ? "failed" : "limited";
-  item.append(
-    node("span", { className: `outcome-dot ${outcomeClass}`, title: entry.outcome }),
-    node("span", { text: entry.containerName }),
-    node("small", {
-      text: `${relativeTime(entry.finishedAt)} · ${formatDuration(entry.durationMs)}`,
-    }),
-  );
-  return item;
-}
-
 function emptyState(title: string, detail: string): HTMLElement {
   const empty = node("div", { className: "popup-empty" });
-  empty.append(
-    node("span", { text: "◇", attrs: { "aria-hidden": "true" } }),
-    node("strong", { text: title }),
-    node("small", { text: detail }),
-  );
+  empty.append(node("strong", { text: title }), node("small", { text: detail }));
   return empty;
 }
 
@@ -167,24 +143,11 @@ function render(state: PublicState): void {
   const list = element<HTMLElement>("#container-list");
   clear(list);
   if (state.containers.length === 0) {
-    list.append(
-      emptyState("No temporary sessions", "Start one above when you need it."),
-    );
+    list.append(emptyState("No sessions", "Start one with the buttons above."));
   } else {
     for (const record of state.containers) list.append(sessionCard(record));
   }
   element<HTMLButtonElement>("#cleanup-all").hidden = state.containers.length === 0;
-
-  const recent = element<HTMLElement>("#recent-cleanup");
-  clear(recent);
-  const entries = state.cleanupHistory.slice(0, 3);
-  if (entries.length === 0) {
-    recent.append(
-      emptyState("No cleanup records", "Completed sessions will appear here."),
-    );
-  } else {
-    for (const entry of entries) recent.append(recentItem(entry));
-  }
   startDrainTicker();
 }
 

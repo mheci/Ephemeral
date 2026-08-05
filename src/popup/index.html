@@ -71,12 +71,7 @@
       </div>
 
       <section class="create-panel" aria-labelledby="create-title">
-        <div class="popup-section-heading">
-          <div>
-            <p class="eyebrow">Start private</p>
-            <h2 id="create-title">New temporary session</h2>
-          </div>
-        </div>
+        <h2 class="popup-section-title" id="create-title">New session</h2>
         <button
           id="create-once"
           class="create-card primary-create"
@@ -166,28 +161,13 @@
 
       <section class="popup-section sessions-section" aria-labelledby="active-title">
         <div class="popup-section-heading row">
-          <div>
-            <p class="eyebrow">Live</p>
-            <h2 id="active-title">Managed sessions</h2>
-          </div>
+          <h2 id="active-title">Sessions</h2>
           <button id="cleanup-all" class="text-button danger-text" type="button" hidden>
             Clean all
           </button>
         </div>
         <div id="container-list" class="popup-session-list popup-scroll">
           <div class="popup-skeleton" aria-hidden="true"></div>
-        </div>
-      </section>
-
-      <section class="popup-section recent-section" aria-labelledby="recent-title">
-        <div class="popup-section-heading">
-          <div>
-            <p class="eyebrow">Local record</p>
-            <h2 id="recent-title">Recent cleanup</h2>
-          </div>
-        </div>
-        <div id="recent-cleanup" class="recent-list">
-          <div class="popup-skeleton short" aria-hidden="true"></div>
         </div>
       </section>
     </main>
