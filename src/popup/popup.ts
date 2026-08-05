@@ -25,6 +25,16 @@ const COLOR_MAP: Readonly<Record<string, string>> = Object.freeze({
   toolbar: "#6b757b",
 });
 
+const ICON_PATHS = Object.freeze({
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  trash:
+    '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+} as const);
+
+function iconSvg(path: string): string {
+  return `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+}
+
 let current: PublicState | undefined;
 let refreshGeneration = 0;
 let scheduledRefresh: number | undefined;
@@ -81,16 +91,16 @@ function sessionCard(record: ContainerView): HTMLElement {
   const actions = node("div", { className: "popup-session-actions" });
   const open = node("button", {
     className: "popup-icon-button",
-    text: "+",
     title: "Open another tab",
     attrs: { type: "button", "aria-label": `Open a tab in ${record.name}` },
   });
   const clean = node("button", {
     className: "popup-icon-button danger",
-    text: "×",
     title: "Clean and destroy",
     attrs: { type: "button", "aria-label": `Clean and destroy ${record.name}` },
   });
+  open.innerHTML = iconSvg(ICON_PATHS.plus);
+  clean.innerHTML = iconSvg(ICON_PATHS.trash);
   open.disabled = record.status !== "active";
   open.addEventListener("click", () => {
     void run(open, () => send({ type: "OPEN_TAB", containerId: record.id }));
@@ -215,6 +225,26 @@ async function run(
   }
 }
 
+const SHORTCUT_TARGETS = Object.freeze([
+  { command: "open-ephemeral-tab", selector: "#create-once" },
+  { command: "open-ephemeral-space", selector: "#create-reusable" },
+  { command: "open-ephemeral-window", selector: "#create-window" },
+] as const);
+
+async function renderShortcutHints(): Promise<void> {
+  try {
+    const commands = await browser.commands.getAll();
+    for (const { command, selector } of SHORTCUT_TARGETS) {
+      const hint = element<HTMLElement>(`${selector} .shortcut-hint`);
+      const shortcut = commands.find((entry) => entry.name === command)?.shortcut;
+      hint.hidden = !shortcut;
+      if (shortcut) hint.textContent = shortcut;
+    }
+  } catch {
+    // Fall back to the static hints in the markup.
+  }
+}
+
 function bind(): void {
   const once = element<HTMLButtonElement>("#create-once");
   once.addEventListener("click", () => {
@@ -284,6 +314,7 @@ window.addEventListener("unhandledrejection", (event) => {
 
 try {
   bind();
+  void renderShortcutHints();
   void refresh(true);
 } catch (error) {
   setAppState("error", error);
