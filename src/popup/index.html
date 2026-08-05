@@ -22,34 +22,53 @@
     <section id="startup-panel" class="popup-system" aria-live="polite">
       <span class="popup-spinner" aria-hidden="true"></span>
       <div>
-        <strong>Connecting to lifecycle service</strong
-        ><small>This should take less than a second.</small
-        ><a href="index.html">Reload</a>
+        <strong>Loading your sessions</strong>
+        <small>Contacting the background service…</small>
+        <a href="index.html">Reload</a>
       </div>
     </section>
 
     <section id="error-panel" class="popup-system error" role="alert" hidden>
       <span class="error-mark" aria-hidden="true">!</span>
       <div>
-        <strong>Ephemeral is unavailable</strong
-        ><small id="error-message">The background process did not respond.</small
-        ><button id="retry-popup" class="text-button" type="button">Try again</button>
+        <strong>Ephemeral is unavailable</strong>
+        <small id="error-message">The background process did not respond.</small>
+        <button id="retry-popup" class="text-button" type="button">Try again</button>
       </div>
     </section>
 
     <main id="popup-content" aria-busy="true">
-      <section class="popup-summary" aria-label="Session summary">
-        <div><strong id="active-count">—</strong><span>sessions</span></div>
-        <div><strong id="pending-count">—</strong><span>processing</span></div>
+      <div class="popup-summary" aria-label="Session summary">
+        <div class="popup-stat">
+          <strong id="active-count">—</strong>
+          <span>Active</span>
+        </div>
+        <div class="popup-stat">
+          <strong id="pending-count">—</strong>
+          <span>Pending</span>
+        </div>
         <button
           id="refresh-popup"
           class="refresh-button"
           type="button"
           aria-label="Refresh"
         >
-          <span aria-hidden="true">↻</span>
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+          </svg>
         </button>
-      </section>
+      </div>
 
       <section class="create-panel" aria-labelledby="create-title">
         <div class="popup-section-heading">
@@ -58,33 +77,94 @@
             <h2 id="create-title">New temporary session</h2>
           </div>
         </div>
-        <button id="create-once" class="create-card primary-create" type="button">
-          <span class="create-icon" aria-hidden="true">＋</span>
-          <span
-            ><strong>New ephemeral tab</strong
-            ><small>Opens and cleans itself when closed – most private</small></span
-          >
+        <button
+          id="create-once"
+          class="create-card primary-create"
+          type="button"
+          data-command="open-ephemeral-tab"
+        >
+          <span class="create-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+          </span>
+          <span class="create-copy">
+            <strong>New ephemeral tab</strong>
+            <small>Self-cleaning tab, wiped when closed</small>
+          </span>
           <span class="shortcut-hint" aria-hidden="true">Ctrl+Alt+E</span>
         </button>
-        <button id="create-reusable" class="create-card" type="button">
-          <span class="create-icon reusable" aria-hidden="true">↻</span>
-          <span
-            ><strong>New ephemeral space</strong
-            ><small>Keep open for many tabs, cleans when you ask</small></span
-          >
+        <button
+          id="create-reusable"
+          class="create-card"
+          type="button"
+          data-command="open-ephemeral-space"
+        >
+          <span class="create-icon reusable" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect width="7" height="7" x="3" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="14" rx="1" />
+              <rect width="7" height="7" x="3" y="14" rx="1" />
+            </svg>
+          </span>
+          <span class="create-copy">
+            <strong>New ephemeral space</strong>
+            <small>Stays open for many tabs, wiped on request</small>
+          </span>
           <span class="shortcut-hint" aria-hidden="true">Ctrl+Alt+U</span>
         </button>
-        <button id="create-window" class="create-card" type="button">
-          <span class="create-icon window" aria-hidden="true">▣</span>
-          <span
-            ><strong>New ephemeral window</strong
-            ><small>Dedicated window, cleans when it closes</small></span
-          >
-          <span class="shortcut-hint" aria-hidden="true">assignable</span>
+        <button
+          id="create-window"
+          class="create-card"
+          type="button"
+          data-command="open-ephemeral-window"
+        >
+          <span class="create-icon window" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect width="20" height="16" x="2" y="4" rx="2" />
+              <path d="M2 9h20" />
+            </svg>
+          </span>
+          <span class="create-copy">
+            <strong>New ephemeral window</strong>
+            <small>Dedicated window, wiped when closed</small>
+          </span>
+          <span class="shortcut-hint" aria-hidden="true" hidden></span>
         </button>
       </section>
 
-      <section class="popup-section" aria-labelledby="active-title">
+      <section class="popup-section sessions-section" aria-labelledby="active-title">
         <div class="popup-section-heading row">
           <div>
             <p class="eyebrow">Live</p>
@@ -94,7 +174,7 @@
             Clean all
           </button>
         </div>
-        <div id="container-list" class="popup-session-list">
+        <div id="container-list" class="popup-session-list popup-scroll">
           <div class="popup-skeleton" aria-hidden="true"></div>
         </div>
       </section>
@@ -114,11 +194,22 @@
 
     <footer class="popup-footer">
       <button id="open-options" class="text-button" type="button">
+        <svg
+          viewBox="0 0 24 24"
+          width="13"
+          height="13"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M7 17 17 7" />
+          <path d="M7 7h10v10" />
+        </svg>
         Open dashboard
       </button>
-      <span class="local-only"
-        ><span aria-hidden="true">●</span> No network access</span
-      >
     </footer>
     <div
       id="notification"
