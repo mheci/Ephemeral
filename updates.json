@@ -1,0 +1,50 @@
+{
+  "id": "ephemeral@mheci.github.io",
+  "versions": [
+    {
+      "version": "2.4.0",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v2.4.0/ephemeral-2.4.0-signed.xpi",
+      "update_hash": "sha256:943a1969a1b77ce5c892c50549b9afd46f36841a6d4ee75ddec176fc9a9652cc"
+    },
+    {
+      "version": "2.3.1",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v2.3.1/ephemeral-2.3.1-signed.xpi",
+      "update_hash": "sha256:709fbe37e434b46476f94a41e950b0df7871c1fa35e1267ba697205d98de9c55"
+    },
+    {
+      "version": "2.3.0",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v2.3.0/ephemeral-2.3.0-signed.xpi",
+      "update_hash": "sha256:2ed1edeb93b245999a7abe96e243a0c39f7a8ac39b517ecc0214ae43d29fd846"
+    },
+    {
+      "version": "2.2.0",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v2.2.0/ephemeral-2.2.0-signed.xpi",
+      "update_hash": "sha256:f4b25a4dedf8a11fb75b2c5bfe32dd5c88c5c6fae4889abddaa98383e98d8e9a"
+    },
+    {
+      "version": "2.1.0",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v2.1.0/ephemeral-2.1.0-signed.xpi",
+      "update_hash": "sha256:ca716b1cd844a7d16604c489e1c4d9dcdf715f5bcef5c59015190fee1c2eb44a"
+    },
+    {
+      "version": "2.0.1",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v2.0.1/ephemeral-2.0.1-signed.xpi",
+      "update_hash": "sha256:d9edd3de80f8e1bb27f07d236523853ef55bed55fa92643b831851a207556fe2"
+    },
+    {
+      "version": "2.0.0",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v2.0.0/ephemeral-2.0.0-signed.xpi",
+      "update_hash": "sha256:a393c54ac04dc34bd5579b9f1089d048c19a58ee530d8e81efbd8a0e384e568b"
+    },
+    {
+      "version": "1.5.0",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v1.5.0/ephemeral-1.5.0-signed.xpi",
+      "update_hash": "sha256:503fc115db0c7d3d53701cf89982f52f9e5dea61463cbb00ebc8b736cb75eb56"
+    },
+    {
+      "version": "1.4.0",
+      "update_link": "https://github.com/mheci/Ephemeral/releases/download/v1.4.0/ephemeral-1.4.0-signed.xpi",
+      "update_hash": "sha256:087e0a6069695f0105e16c057e9ae0cf30b313e932d10ff9a3bf32544607acf2"
+    }
+  ]
+}
