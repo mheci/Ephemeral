@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.4.0](https://github.com/mheci/Ephemeral/compare/v2.3.1...v2.4.0) (2026-08-22)
+
+
+### Features
+
+* panic wipe with undo grace, self-hosted auto-update channel, hot-path perf ([#25](https://github.com/mheci/Ephemeral/issues/25)) ([cd0c9c3](https://github.com/mheci/Ephemeral/commit/cd0c9c33c336e414eb5305da8837a5bcceafa84a))
+
+
+### Bug Fixes
+
+* enforce LF line endings via .gitattributes so the format gate passes on Windows ([#23](https://github.com/mheci/Ephemeral/issues/23)) ([a55e575](https://github.com/mheci/Ephemeral/commit/a55e5750f34f0387f38224359fd054b4309804e1))
+
 ## [2.3.1](https://github.com/mheci/Ephemeral/compare/v2.3.0...v2.3.1) (2026-08-05)
 
 
