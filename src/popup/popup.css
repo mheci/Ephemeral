@@ -399,6 +399,10 @@
   background: var(--warning-soft);
   color: var(--warning);
 }
+.popup-chip.panic-chip {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
 .popup-error {
   margin: 0;
   padding: 6px 12px;

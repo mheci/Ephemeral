@@ -8,6 +8,7 @@
     "gecko": {
       "id": "ephemeral@mheci.github.io",
       "strict_min_version": "153.0",
+      "update_url": "https://mheci.github.io/Ephemeral/updates.json",
       "data_collection_permissions": {
         "required": [
           "none"
@@ -85,6 +86,9 @@
     },
     "open-ephemeral-window": {
       "description": "Open new ephemeral window"
+    },
+    "panic-clean": {
+      "description": "Panic clean – arm the wipe of every active session"
     }
   },
   "content_security_policy": {

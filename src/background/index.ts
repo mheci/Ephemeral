@@ -144,6 +144,8 @@ if (browser.commands?.onCommand) {
       );
     } else if (command === "open-ephemeral-window") {
       report(controller.createWindow("one-time"), "command-open-ephemeral-window");
+    } else if (command === "panic-clean") {
+      report(controller.panicClean(), "command-panic-clean");
     }
     // _execute_action is handled by Firefox opening the popup
   });

@@ -21,6 +21,10 @@ if (manifest.version !== packageJson.version)
 if (manifest.browser_specific_settings?.gecko?.strict_min_version !== "153.0") {
   errors.push("strict_min_version must match the Firefox 153 baseline");
 }
+const UPDATE_URL = "https://mheci.github.io/Ephemeral/updates.json";
+if (manifest.browser_specific_settings?.gecko?.update_url !== UPDATE_URL) {
+  errors.push(`gecko.update_url must stay pinned to ${UPDATE_URL}`);
+}
 if (
   JSON.stringify(
     manifest.browser_specific_settings?.gecko?.data_collection_permissions?.required,

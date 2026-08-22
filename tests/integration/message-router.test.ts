@@ -106,6 +106,18 @@ describe("MessageRouter", () => {
       sender,
     );
     expect(await router.handle({ type: "CLEANUP_ALL" }, sender)).toEqual({ ok: true });
+    await router.handle(
+      { type: "CREATE_CONTAINER", kind: "one-time", openTab: false },
+      sender,
+    );
+    expect(await router.handle({ type: "PANIC_CLEAN" }, sender)).toEqual({
+      ok: true,
+      data: 1,
+    });
+    expect(await router.handle({ type: "CANCEL_PANIC_CLEAN" }, sender)).toEqual({
+      ok: true,
+      data: 1,
+    });
   });
 
   it("routes CREATE_WINDOW through to the controller", async () => {

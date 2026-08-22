@@ -162,9 +162,28 @@
       <section class="popup-section sessions-section" aria-labelledby="active-title">
         <div class="popup-section-heading row">
           <h2 id="active-title">Sessions</h2>
-          <button id="cleanup-all" class="text-button danger-text" type="button" hidden>
-            Clean all
-          </button>
+          <span class="row-actions">
+            <button
+              id="cancel-panic"
+              class="text-button"
+              type="button"
+              hidden
+              title="Cancel the pending panic wipe"
+            >
+              Cancel wipe
+            </button>
+            <button id="panic-clean" class="text-button danger-text" type="button">
+              Panic clean
+            </button>
+            <button
+              id="cleanup-all"
+              class="text-button danger-text"
+              type="button"
+              hidden
+            >
+              Clean all
+            </button>
+          </span>
         </div>
         <div id="container-list" class="popup-session-list popup-scroll">
           <div class="popup-skeleton" aria-hidden="true"></div>

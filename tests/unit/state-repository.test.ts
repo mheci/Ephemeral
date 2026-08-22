@@ -212,4 +212,94 @@ describe("StateRepository", () => {
       "Recovered",
     );
   });
+
+  it("summarizes badge counts from in-memory state without cloning history", async () => {
+    const adapter = new MockAdapter();
+    adapter.stored = createInitialState();
+    const repository = new StateRepository(adapter);
+    await repository.initialize();
+
+    expect(await repository.badgeSummary()).toEqual({
+      total: 0,
+      failed: false,
+      pending: false,
+    });
+
+    await repository.transaction((draft) => {
+      draft.containers["container-1"] = {
+        id: "container-1",
+        operationToken: "AAA111",
+        cookieStoreId: "firefox-container-1",
+        name: "Ephemeral · AAA111",
+        kind: "one-time",
+        color: "blue",
+        icon: "circle",
+        createdAt: 1,
+        lastActivityAt: 1,
+        createdBrowserSessionId: "session-1",
+        policy: draft.settings.oneTimePolicy,
+        status: "active",
+        cleanupAttempts: 0,
+      };
+      draft.containers["container-2"] = {
+        ...draft.containers["container-1"],
+        id: "container-2",
+        status: "failed",
+      };
+      draft.cleanupHistory.push({
+        id: "cleanup-1",
+        containerId: "container-2",
+        containerName: "Ephemeral · AAA111",
+        trigger: "manual",
+        startedAt: 1,
+        finishedAt: 2,
+        durationMs: 1,
+        outcome: "failed",
+        attempt: 1,
+        steps: [],
+        limitations: [],
+      });
+    });
+
+    expect(await repository.badgeSummary()).toEqual({
+      total: 2,
+      failed: true,
+      pending: false,
+    });
+    // The summary is primitives only; snapshots stay fully isolated clones.
+    const snapshot = await repository.snapshot();
+    const cloned = snapshot.containers["container-1"];
+    if (cloned) cloned.status = "cleaning";
+    expect((await repository.badgeSummary()).pending).toBe(false);
+  });
+
+  it("resolves a container id by cookie store without exposing record copies", async () => {
+    const adapter = new MockAdapter();
+    adapter.stored = createInitialState();
+    const repository = new StateRepository(adapter);
+    await repository.initialize();
+    await repository.transaction((draft) => {
+      draft.containers["container-9"] = {
+        id: "container-9",
+        operationToken: "ZZZ999",
+        cookieStoreId: "firefox-container-9",
+        name: "Ephemeral · ZZZ999",
+        kind: "reusable",
+        color: "blue",
+        icon: "circle",
+        createdAt: 1,
+        lastActivityAt: 1,
+        createdBrowserSessionId: "session-1",
+        policy: draft.settings.reusablePolicy,
+        status: "active",
+        cleanupAttempts: 0,
+      };
+    });
+    expect(await repository.containerIdForCookieStore("firefox-container-9")).toBe(
+      "container-9",
+    );
+    expect(
+      await repository.containerIdForCookieStore("firefox-container-none"),
+    ).toBeUndefined();
+  });
 });

@@ -5,6 +5,7 @@ import type { BrowserAdapter } from "./browser-adapter";
 const INACTIVITY_PREFIX = "ephemeral:inactivity:";
 const RETRY_PREFIX = "ephemeral:retry:";
 const DRAIN_PREFIX = "ephemeral:drain:";
+const PANIC_PREFIX = "ephemeral:panic:";
 const RECOVERY_ALARM = "ephemeral:recovery";
 const MIN_ALARM_LEAD_MS = 1_000;
 
@@ -12,6 +13,7 @@ export type ParsedAlarm =
   | { kind: "inactivity"; containerId: string }
   | { kind: "retry"; containerId: string }
   | { kind: "drain"; containerId: string }
+  | { kind: "panic"; containerId: string }
   | { kind: "recovery" }
   | { kind: "unknown" };
 
@@ -39,6 +41,7 @@ export class Scheduler {
       this.adapter.cancelAlarm(`${INACTIVITY_PREFIX}${containerId}`),
       this.adapter.cancelAlarm(`${RETRY_PREFIX}${containerId}`),
       this.adapter.cancelAlarm(`${DRAIN_PREFIX}${containerId}`),
+      this.adapter.cancelAlarm(`${PANIC_PREFIX}${containerId}`),
     ]);
   }
 
@@ -52,6 +55,18 @@ export class Scheduler {
 
   public async cancelDrain(containerId: string): Promise<void> {
     await this.adapter.cancelAlarm(`${DRAIN_PREFIX}${containerId}`);
+  }
+
+  /** Arms the panic-wipe deadline; expiry force-cleans regardless of open tabs. */
+  public async schedulePanic(containerId: string, deadline: number): Promise<void> {
+    await this.adapter.scheduleAlarm(
+      `${PANIC_PREFIX}${containerId}`,
+      Math.max(deadline, this.now() + MIN_ALARM_LEAD_MS),
+    );
+  }
+
+  public async cancelPanic(containerId: string): Promise<void> {
+    await this.adapter.cancelAlarm(`${PANIC_PREFIX}${containerId}`);
   }
 
   /** Disarms the inactivity alarm without touching retry/drain state. */
@@ -91,6 +106,9 @@ export class Scheduler {
     }
     if (name.startsWith(DRAIN_PREFIX)) {
       return { kind: "drain", containerId: name.slice(DRAIN_PREFIX.length) };
+    }
+    if (name.startsWith(PANIC_PREFIX)) {
+      return { kind: "panic", containerId: name.slice(PANIC_PREFIX.length) };
     }
     return { kind: "unknown" };
   }

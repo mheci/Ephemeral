@@ -17,6 +17,7 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          # GITHUB_TOKEN cannot create PRs in this repo (Actions PR
-          # creation is disabled); use a dedicated PAT secret instead.
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # The default GITHUB_TOKEN suffices because the repository allows
+          # Actions to create and approve pull requests (owner setting);
+          # the previous dedicated PAT expired and broke every release run.
+          token: ${{ github.token }}

@@ -34,6 +34,16 @@ let scheduledRefresh: number | undefined;
 let drainChips: Array<{ deadline: number; el: HTMLElement }> = [];
 let drainTicker: number | undefined;
 
+function anyPanicPending(state: PublicState): boolean {
+  return state.containers.some(
+    (record) => record.status === "active" && record.panicDeadline !== undefined,
+  );
+}
+
+function panicCountdownText(deadline: number): string {
+  return countdownText(deadline, Date.now(), "wipes");
+}
+
 function startDrainTicker(): void {
   if (drainTicker !== undefined) return;
   drainTicker = window.setInterval(() => {
@@ -117,6 +127,15 @@ function sessionCard(record: ContainerView): HTMLElement {
     drainChips.push({ deadline: record.drainDeadline, el: drain });
     meta.append(drain);
   }
+  if (record.panicDeadline !== undefined) {
+    const panic = node("span", {
+      className: "popup-chip drain-chip panic-chip",
+      text: panicCountdownText(record.panicDeadline),
+      attrs: { role: "status" },
+    });
+    drainChips.push({ deadline: record.panicDeadline, el: panic });
+    meta.append(panic);
+  }
   card.append(meta);
   if (record.lastError)
     card.append(node("p", { className: "popup-error", text: record.lastError }));
@@ -148,6 +167,10 @@ function render(state: PublicState): void {
     for (const record of state.containers) list.append(sessionCard(record));
   }
   element<HTMLButtonElement>("#cleanup-all").hidden = state.containers.length === 0;
+  const panicPending = anyPanicPending(state);
+  element<HTMLButtonElement>("#panic-clean").disabled =
+    state.containers.length === 0 || panicPending;
+  element<HTMLButtonElement>("#cancel-panic").hidden = !panicPending;
   startDrainTicker();
 }
 
@@ -236,6 +259,24 @@ function bind(): void {
     void run(cleanupAll, async () => {
       await send({ type: "CLEANUP_ALL" });
       notify("All managed sessions were processed.");
+    });
+  });
+  const panicClean = element<HTMLButtonElement>("#panic-clean");
+  panicClean.addEventListener("click", () => {
+    if (!current || current.containers.length === 0) return;
+    const seconds = current.settings.panicGraceSeconds;
+    void run(panicClean, async () => {
+      await send({ type: "PANIC_CLEAN" });
+      notify(
+        `Panic wipe armed – everything cleans in ${seconds}s. Reopen this popup to cancel.`,
+      );
+    });
+  });
+  const cancelPanic = element<HTMLButtonElement>("#cancel-panic");
+  cancelPanic.addEventListener("click", () => {
+    void run(cancelPanic, async () => {
+      await send({ type: "CANCEL_PANIC_CLEAN" });
+      notify("Panic wipe cancelled. Nothing was erased.");
     });
   });
   element<HTMLButtonElement>("#refresh-popup").addEventListener("click", (event) => {

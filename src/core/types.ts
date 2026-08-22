@@ -9,6 +9,7 @@ export type CleanupTrigger =
   | "inactivity"
   | "manual"
   | "manual-all"
+  | "panic-expired"
   | "recovery"
   | "external-removal";
 export type ContainerStatus = "active" | "pending" | "cleaning" | "failed";
@@ -53,6 +54,8 @@ export type Settings = {
   cleanup: CleanupPolicy;
   retry: RetryPolicy;
   cleanupHistoryLimit: number;
+  /** Undo window (seconds) for the panic wipe before every active container force-cleans. */
+  panicGraceSeconds: number;
 };
 
 export type ContainerRecord = {
@@ -70,6 +73,8 @@ export type ContainerRecord = {
   status: ContainerStatus;
   /** Deadline until which cleanup is deferred after the last tab closed (drain grace). */
   drainDeadline?: number;
+  /** Deadline at which a panic wipe force-cleans this container regardless of open tabs. */
+  panicDeadline?: number;
   pendingTrigger?: CleanupTrigger;
   cleanupAttempts: number;
   lastError?: string;
@@ -200,6 +205,8 @@ export type RequestMessage =
   | { type: "OPEN_TAB"; containerId: string }
   | { type: "CLEANUP_CONTAINER"; containerId: string }
   | { type: "CLEANUP_ALL" }
+  | { type: "PANIC_CLEAN" }
+  | { type: "CANCEL_PANIC_CLEAN" }
   | { type: "UPDATE_SETTINGS"; settings: unknown }
   | { type: "UPDATE_CONTAINER_POLICY"; containerId: string; policy: unknown }
   | { type: "IMPORT_SETTINGS"; text: string }
