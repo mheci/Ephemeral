@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: amo-production
+    outputs:
+      skip: ${{ steps.release.outputs.skip }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - name: Resolve release
         id: release
@@ -117,3 +120,84 @@ jobs:
         run: |
           gh release upload "$TAG" artifacts/* --clobber
           gh api --method PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" -f draft=false -f prerelease=false -f make_latest=true >/dev/null
+
+  update-channel:
+    # Self-hosted auto-update channel: Ephemeral is unlisted on AMO, so Firefox
+    # only offers updates through the gecko.update_url manifest published to
+    # GitHub Pages. Regenerated from the live release list so it can never
+    # point at a download that does not exist.
+    name: Publish Firefox update manifest
+    needs: sign
+    if: ${{ needs.sign.outputs.skip != 'true' && startsWith(needs.sign.outputs.tag, 'v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Regenerate updates.json from published releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/update-manifest.mjs --out "$RUNNER_TEMP/updates.json"
+          UPDATES="$RUNNER_TEMP/updates.json" node -e '
+            const fs = require("node:fs");
+            const m = JSON.parse(fs.readFileSync("src/manifest.json", "utf8"));
+            const u = JSON.parse(fs.readFileSync(process.env.UPDATES, "utf8"));
+            const gecko = m.browser_specific_settings?.gecko ?? {};
+            if (u.id !== gecko.id) throw new Error(`id mismatch: ${u.id} vs ${gecko.id}`);
+            if (!Array.isArray(u.versions) || u.versions.length === 0) throw new Error("no versions");
+            for (const v of u.versions) {
+              if (!/^\d+\.\d+\.\d+$/.test(v.version)) throw new Error(`bad version ${v.version}`);
+              if (typeof v.update_link !== "string" || !v.update_link.includes("/releases/download/v")) {
+                throw new Error(`bad update_link for ${v.version}`);
+              }
+              if (v.update_hash !== undefined && !v.update_hash.startsWith("sha256:")) {
+                throw new Error(`bad update_hash for ${v.version}`);
+              }
+            }
+            console.log(`update manifest OK (${u.versions.length} entries, newest ${u.versions[0].version})`);
+          '
+
+      - name: Deploy to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEEDS_TAG: ${{ needs.sign.outputs.tag }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          WORK="$RUNNER_TEMP/pages"
+
+          # Credentials travel through a credential helper rather than the
+          # remote URL so the token can never leak into argv or git errors.
+          export GIT_ASKPASS=/bin/true
+          git config --global credential.helper '!f() { printf "username=x-access-token\npassword=%s\n" "$GH_TOKEN"; }; f'
+
+          # Bootstrap the orphan branch on first deploy; afterwards every push
+          # is a plain fast-forward — this branch is never force-pushed.
+          if git ls-remote --exit-code --heads "https://github.com/$REPO.git" gh-pages >/dev/null 2>&1; then
+            git clone --depth 1 --branch gh-pages "https://github.com/$REPO.git" "$WORK"
+          else
+            mkdir -p "$WORK"
+            git -C "$WORK" init --initial-branch=gh-pages
+            git -C "$WORK" remote add origin "https://github.com/$REPO.git"
+          fi
+
+          cp "$RUNNER_TEMP/updates.json" "$WORK/updates.json"
+          touch "$WORK/.nojekyll"
+          git -C "$WORK" add updates.json .nojekyll
+
+          if git -C "$WORK" diff --cached --quiet; then
+            echo "updates.json unchanged - nothing to publish"
+            exit 0
+          fi
+          git -C "$WORK" -c user.name="mheci" \
+            -c user.email="274998646+mheci@users.noreply.github.com" \
+            commit -m "updates: publish manifest for ${NEEDS_TAG}"
+          git -C "$WORK" push origin gh-pages

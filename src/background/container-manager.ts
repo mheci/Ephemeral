@@ -247,13 +247,12 @@ export class ContainerManager {
   }
 
   public async touchByCookieStore(cookieStoreId: string): Promise<string | undefined> {
-    const state = await this.repository.snapshot();
-    const record = Object.values(state.containers).find(
-      (candidate) => candidate.cookieStoreId === cookieStoreId,
-    );
-    if (!record) return undefined;
-    await this.touch(record.id);
-    return record.id;
+    // Primitive lookup on the in-memory index: per-tab-event touch must not
+    // structuredClone the whole persisted state just to find one container id.
+    const containerId = await this.repository.containerIdForCookieStore(cookieStoreId);
+    if (containerId === undefined) return undefined;
+    await this.touch(containerId);
+    return containerId;
   }
 
   public async updatePolicy(containerId: string, value: unknown): Promise<void> {

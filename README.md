@@ -33,6 +33,11 @@ Firefox 153+ required.
 1. Download latest `-signed.xpi` from [Releases](https://github.com/mheci/Ephemeral/releases/latest)
 2. Open file in Firefox → Approve permissions
 
+**Updates:** installs made from v2.4.0 or later update automatically – Firefox checks
+`https://mheci.github.io/Ephemeral/updates.json`, which points at each release's signed XPI on GitHub
+(hash-verified before install). Ephemeral is unlisted on AMO, so Mozilla does not deliver updates.
+Installs of older versions must reinstall once from a v2.4.0+ signed XPI to move onto the auto-update track.
+
 ## Use
 
 **Keyboard (fastest, invisible):**
@@ -50,9 +55,11 @@ Change shortcuts: Add-ons Manager → Gear → Manage Extension Shortcuts
 - Right-click link → Open link in new ephemeral tab / window
 - Right-click page → Open this page in new ephemeral tab / window
 
-**Cleanup triggers:** Last tab closed, window closed, browser restart, inactivity timeout, manual Clean button, or context menu.
+**Cleanup triggers:** Last tab closed, window closed, browser restart, inactivity timeout, manual Clean button, panic wipe, or context menu.
 
 **Undo close:** optionally set an "undo-close grace" per policy (0–600 seconds). After the last tab closes, cleanup waits – the popup and dashboard show a live countdown – and reopening the tab (or `Ctrl+Shift+T`) cancels the cleanup.
+
+**Panic clean:** one toolbar button or assignable hotkey arms a wipe of every active session after a short undo window (default 10 s, configurable 0–600 s). A live "wipes in Ns" countdown shows everywhere; pressing *Cancel wipe* is the only way back. Tab activity does not rescue an armed panic wipe – only the explicit cancel does.
 
 **Lifetime stats:** the dashboard shows local-only counters (sessions cleaned, tabs closed, data types erased) that never leave your device.
 
@@ -82,7 +89,9 @@ See [Privacy](docs/privacy.md) and [Security](SECURITY.md).
 - Event-driven, non-persistent background – no polling
 - Tab ownership cached + persisted to session storage (500 entries max, debounced)
 - Reverse index for O(1) cleanup, sequential tab queries to avoid bursts
-- Badge updates cached, logs silent/throttled, locks bounded (200 keys) with timeout
+- Badge updates cached + served from primitive state summaries (no full-state clones per event)
+- Per-tab-event container lookup reads an in-memory index instead of cloning persisted state
+- Logs silent/throttled, locks bounded (200 keys) with timeout
 - Hotkeys & context menus debounced 350ms to avoid spam
 
 ## Development

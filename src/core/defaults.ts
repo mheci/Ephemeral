@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
     delaysMinutes: Object.freeze([1, 5, 15, 60, 240]) as unknown as number[],
   }),
   cleanupHistoryLimit: 50,
+  panicGraceSeconds: 10,
 });
 
 export function createDefaultSettings(): Settings {

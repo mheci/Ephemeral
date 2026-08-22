@@ -49,6 +49,21 @@ When the last tab of a container closes and `destroyOnLastTabClose` is set, clea
 5. Changing a session policy re-anchors an active drain to the new grace value, or clears it when grace is disabled.
 6. The popup and dashboard show a live "cleans in Ns" countdown chip (1 s ticker, stopped when no drains exist).
 
+## Panic Wipe
+
+Panic clean is a global, keyboard-first counterpart to per-container cleanup:
+
+1. `PANIC_CLEAN` (popup/dashboard button or the assignable `panic-clean` command) arms
+   `panicDeadline = now + settings.panicGraceSeconds * 1000` on EVERY active container in one
+   batched transaction and arms an `ephemeral:panic:<id>` alarm per container. Default grace is
+   10 s (0–600 s, dashboard "Cleanup" section).
+2. Expiry calls cleanup with the dedicated `panic-expired` trigger, which – unlike
+   `last-tab-closed`/`grace-expired` – force-cleans regardless of open tabs.
+3. Undo is explicit only: `CANCEL_PANIC_CLEAN` clears every pending panic deadline and alarm.
+   Tab activity touches containers (which cancels drains) but never cancels a panic wipe.
+4. Persisted `panicDeadline` survives event-page suspension: recovery re-arms future deadlines
+   and settles expired ones immediately with the same force-cleanup semantics.
+
 ## Lifetime Privacy Stats
 
 Local-only counters in the persisted state (`lifetimeStats`), surfaced on the dashboard hero and in diagnostics exports: sessions created, sessions cleaned, failed cleanups, container-scoped data types Firefox acknowledged erasing, and tabs closed by cleanups. They are incremented only inside the same transaction that records the event, survive browser restarts, and are never sent anywhere. A missing or corrupted stats object in stored state resets to zeros without affecting managed containers.
@@ -68,11 +83,14 @@ Unknown state schema: settings/history reset, parseable container records salvag
 ## Resource Use – Invisible
 
 - No polling, no content scripts, no network, no deps, no WASM
-- One inactivity alarm per container (when enabled), one drain alarm per active undo-close window, one retry per failed, one global recovery
+- One inactivity alarm per container (when enabled), one drain alarm per active undo-close window,
+  one panic alarm per armed wipe, one retry per failed, one global recovery
 - Bounded: history (50 default, 0-500), retries, locks (max 200 keys, auto-prune), timers, tabOwners (500 max, debounced session storage save)
 - Reverse index containerId→Set<tabId> for O(1) forget
 - Tab ownership persisted to storage.session to survive event-page restarts – avoids full scan fallback
-- Badge cached to avoid redundant API calls
+- Badge reads a primitive {total, failed, pending} summary; per-tab-event cookie-store lookup scans the in-memory index – neither clones the persisted state
+- Independent warm-up stages of event-page initialization run concurrently (tab-owner load, session id, capabilities)
+- Badge text/color cached to avoid redundant API calls
 - Logger silent for debug/info, throttled warn (5s)
 - Hotkeys & context menus debounced 350ms
 - getPublicState sequential, not Promise.all burst
@@ -105,10 +123,22 @@ Popup/dashboard have `booting|ready|error` states, 10s request timeout, retry co
 
 New file `src/onboarding/` – 4 steps, plain language, theme-able via `ui.css` variables (light/dark via prefers-color-scheme). Triggered on `runtime.onInstalled` reason install if `onboardingCompleted` not set. Stores flag in storage.local. Includes hotkey demos, cleanup visual, final actions to try ephemeral tab or open dashboard, keyboard navigation (arrows, Enter, Escape).
 
+## Update Channel
+
+Ephemeral is unlisted on AMO (signed via the `unlisted` channel; GitHub Releases is the
+distribution), so Mozilla does not deliver updates. The manifest pins
+`browser_specific_settings.gecko.update_url` to `https://mheci.github.io/Ephemeral/updates.json`.
+`scripts/update-manifest.mjs` regenerates that Firefox update manifest from the repository's
+published releases – every non-draft release carrying an `ephemeral-<version>-signed.xpi` asset
+becomes an entry (newest first) with `update_hash` from the release asset's sha256 digest. The
+release workflow's "Publish Firefox update manifest" job regenerates, sanity-checks, and deploys it
+to the orphan `gh-pages` branch (fast-forward only). Installs predating v2.4.0 carry no update_url:
+one manual reinstall of any ≥2.4.0 signed XPI moves them onto the auto-update track.
+
 ## Tests
 
-- Unit: policy, validation, defaults, errors, keyed-lock, scheduler, state-repo, firefox-adapter, ui-client
-- Integration: controller lifecycle, recovery, message-router, ui-reliability
+- Unit: policy, validation, defaults, errors, keyed-lock, scheduler, state-repo, firefox-adapter, ui-client, update-manifest
+- Integration: controller lifecycle, recovery, message-router, ui-reliability, panic wipe
 - Stress: 1000 sequential sessions bounded
 - E2E: real Firefox cookies, localStorage, IndexedDB, isolation, last-tab cleanup, ephemeral window close cleanup
 - Bench: policy hot paths

@@ -91,10 +91,21 @@ function readPolicy(prefix: "once" | "reuse"): LifecyclePolicy {
   };
 }
 
+function anyPanicPending(state: PublicState): boolean {
+  return state.containers.some(
+    (record) => record.status === "active" && record.panicDeadline !== undefined,
+  );
+}
+
+function panicCountdownText(deadline: number): string {
+  return countdownText(deadline, Date.now(), "wipes");
+}
+
 function renderSettings(state: PublicState): void {
   input("name-prefix").value = state.settings.containerNamePrefix;
   input("start-url").value = state.settings.startUrl;
   input("history-limit").value = String(state.settings.cleanupHistoryLimit);
+  input("panic-grace").value = String(state.settings.panicGraceSeconds);
   input("download-metadata").checked = state.settings.cleanup.eraseDownloadMetadata;
   input("sweep-global-history").checked = state.settings.cleanup.sweepGlobalHistory;
   setPolicy("once", state.settings.oneTimePolicy);
@@ -179,6 +190,15 @@ function sessionCard(record: ContainerView): HTMLElement {
     });
     drainChips.push({ deadline: record.drainDeadline, el: drain });
     meta.append(drain);
+  }
+  if (record.panicDeadline !== undefined) {
+    const panic = node("span", {
+      className: "chip drain-chip panic-chip",
+      text: panicCountdownText(record.panicDeadline),
+      attrs: { role: "status" },
+    });
+    drainChips.push({ deadline: record.panicDeadline, el: panic });
+    meta.append(panic);
   }
   card.append(meta);
 
@@ -399,6 +419,10 @@ function render(state: PublicState): void {
     for (const record of state.containers) active.append(sessionCard(record));
   }
   element<HTMLButtonElement>("#cleanup-all").disabled = state.containers.length === 0;
+  const panicPending = anyPanicPending(state);
+  const panicButton = element<HTMLButtonElement>("#panic-clean");
+  panicButton.disabled = state.containers.length === 0 || panicPending;
+  element<HTMLButtonElement>("#cancel-panic").hidden = !panicPending;
 
   const history = element<HTMLElement>("#history-list");
   clear(history);
@@ -465,6 +489,7 @@ function readSettings(): Settings {
       sweepGlobalHistory: input("sweep-global-history").checked,
     },
     cleanupHistoryLimit: Number(input("history-limit").value),
+    panicGraceSeconds: Number(input("panic-grace").value),
   };
 }
 
@@ -501,6 +526,24 @@ function bind(): void {
     void run(cleanupAll, async () => {
       await send({ type: "CLEANUP_ALL" });
       notify("All managed sessions were processed.");
+    });
+  });
+
+  const panicClean = element<HTMLButtonElement>("#panic-clean");
+  panicClean.addEventListener("click", () => {
+    if (!current || current.containers.length === 0) return;
+    const seconds = current.settings.panicGraceSeconds;
+    void run(panicClean, async () => {
+      await send({ type: "PANIC_CLEAN" });
+      notify(`Panic wipe armed – everything cleans in ${seconds}s.`);
+    });
+  });
+
+  const cancelPanic = element<HTMLButtonElement>("#cancel-panic");
+  cancelPanic.addEventListener("click", () => {
+    void run(cancelPanic, async () => {
+      await send({ type: "CANCEL_PANIC_CLEAN" });
+      notify("Panic wipe cancelled. Nothing was erased.");
     });
   });
 
