@@ -59,7 +59,7 @@ Change shortcuts: Add-ons Manager → Gear → Manage Extension Shortcuts
 
 **Undo close:** optionally set an "undo-close grace" per policy (0–600 seconds). After the last tab closes, cleanup waits – the popup and dashboard show a live countdown – and reopening the tab (or `Ctrl+Shift+T`) cancels the cleanup.
 
-**Panic clean:** one toolbar button or assignable hotkey arms a wipe of every active session after a short undo window (default 10 s, configurable 0–600 s). A live "wipes in Ns" countdown shows everywhere; pressing *Cancel wipe* is the only way back. Tab activity does not rescue an armed panic wipe – only the explicit cancel does.
+**Panic clean:** one toolbar button or assignable hotkey arms a wipe of every active session after a short undo window (default 10 s, configurable 0–600 s). A live "wipes in Ns" countdown shows everywhere; pressing _Cancel wipe_ is the only way back. Tab activity does not rescue an armed panic wipe – only the explicit cancel does.
 
 **Lifetime stats:** the dashboard shows local-only counters (sessions cleaned, tabs closed, data types erased) that never leave your device.
 
