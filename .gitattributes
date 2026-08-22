@@ -1,0 +1,6 @@
+# Normalize all text files to LF so `prettier --check` (endOfLine: lf) passes
+# identically on every platform regardless of core.autocrlf.
+* text=auto eol=lf
+
+# Binary assets must never be normalized.
+*.png -text
