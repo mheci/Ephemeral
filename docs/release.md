@@ -34,6 +34,12 @@ Release Please uses conventional commits, maintains release PR that updates:
 
 Only reviewed main changes eligible.
 
+When release-please creates the version bump commit it also creates the tag and GitHub
+release, then dispatches the "Signed release" workflow for the new tag (a GITHUB_TOKEN-created
+release does not fire its own `release` event). If that dispatch is ever suppressed, an owner
+can trigger signing manually: Actions → Signed release → Run workflow (existing tag), or
+`gh workflow run "Signed release" -f tag=vX.Y.Z`.
+
 ## Signing
 
 Release workflow rebuilds, retests tagged source, creates deterministic archives, submits via Mozilla unlisted signing channel (JWT), verifies returned XPI, uploads:

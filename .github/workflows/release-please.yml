@@ -8,12 +8,14 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - id: release
+        uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
@@ -21,3 +23,16 @@ jobs:
           # Actions to create and approve pull requests (owner setting);
           # the previous dedicated PAT expired and broke every release run.
           token: ${{ github.token }}
+
+      - name: Dispatch signed release build
+        if: steps.release.outputs.releases_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          # A release created with GITHUB_TOKEN does not fire its own
+          # `release` event (GitHub suppresses GITHUB_TOKEN-triggered
+          # events), so the Signed release workflow must be dispatched
+          # explicitly. workflow_dispatch is exempt from that suppression.
+          gh workflow run "Signed release" --ref main -f tag="$TAG"
+          echo "Dispatched Signed release for $TAG"
