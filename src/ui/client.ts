@@ -89,13 +89,19 @@ export function relativeTime(timestamp: number, now = Date.now()): string {
   );
 }
 
-/** Live "cleans in 12s" text for drain-grace countdown chips. */
-export function countdownText(deadline: number, now = Date.now()): string {
+/** Live "cleans in 12s" text for drain/panic countdown chips. */
+export function countdownText(
+  deadline: number,
+  now = Date.now(),
+  verb = "cleans",
+): string {
   const remaining = Math.max(0, Math.ceil((deadline - now) / 1_000));
-  if (remaining < 60) return `cleans in ${remaining}s`;
+  if (remaining < 60) return `${verb} in ${remaining}s`;
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
-  return seconds === 0 ? `cleans in ${minutes}m` : `cleans in ${minutes}m ${seconds}s`;
+  return seconds === 0
+    ? `${verb} in ${minutes}m`
+    : `${verb} in ${minutes}m ${seconds}s`;
 }
 
 export function downloadText(filename: string, text: string): void {

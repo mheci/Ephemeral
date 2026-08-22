@@ -73,11 +73,15 @@ export class Controller {
 
   private async initializeOnce(): Promise<void> {
     await this.repository.initialize();
-    await this.loadTabOwners();
-    this.browserSessionId =
-      (await this.adapter.getBrowserSessionId()) ?? randomId("session");
+    // Independent warm-up stages run concurrently to keep event-page wake-ups
+    // short; the recovery passes below depend on their results and stay ordered.
+    const [, sessionId] = await Promise.all([
+      this.loadTabOwners(),
+      this.adapter.getBrowserSessionId(),
+      this.manager.getCapabilities(),
+    ]);
+    this.browserSessionId = sessionId ?? randomId("session");
     await this.adapter.setBrowserSessionId(this.browserSessionId);
-    await this.manager.getCapabilities();
     await this.manager.recoverCreationIntents();
     await this.recoverLifecycle();
     await this.updateBadge();
@@ -100,18 +104,29 @@ export class Controller {
         record.cleanupAttempts < state.settings.retry.maxAttempts
       ) {
         await this.scheduler.scheduleRetry(record, state.settings);
-      } else if (record.status === "active" && record.drainDeadline !== undefined) {
-        if (this.now() >= record.drainDeadline) {
-          // A drain window that expired while the event page was suspended:
-          // settle it exactly as the alarm would have.
-          const tabs = await this.adapter.queryTabs(record.cookieStoreId);
-          if (tabs.length > 0) await this.clearDrain(record.id);
-          else await this.cleanup.request(record.id, "grace-expired");
-        } else {
-          await this.scheduler.scheduleDrain(record.id, record.drainDeadline);
-        }
       } else if (record.status === "active") {
-        await this.scheduler.scheduleInactivity(record);
+        // Panic wipes survive event-page suspension exactly like drains; an
+        // expired one settles immediately and force-cleans even with tabs.
+        if (record.panicDeadline !== undefined) {
+          if (this.now() >= record.panicDeadline) {
+            await this.cleanup.request(record.id, "panic-expired");
+            continue;
+          }
+          await this.scheduler.schedulePanic(record.id, record.panicDeadline);
+        }
+        if (record.drainDeadline !== undefined) {
+          if (this.now() >= record.drainDeadline) {
+            // A drain window that expired while the event page was suspended:
+            // settle it exactly as the alarm would have.
+            const tabs = await this.adapter.queryTabs(record.cookieStoreId);
+            if (tabs.length > 0) await this.clearDrain(record.id);
+            else await this.cleanup.request(record.id, "grace-expired");
+          } else {
+            await this.scheduler.scheduleDrain(record.id, record.drainDeadline);
+          }
+        } else if (record.panicDeadline === undefined) {
+          await this.scheduler.scheduleInactivity(record);
+        }
       }
     }
     if (needsRecoveryAlarm) await this.scheduler.armRecovery();
@@ -322,6 +337,16 @@ export class Controller {
         if (tabs.length > 0) await this.clearDrain(record.id);
         else await this.cleanup.request(record.id, "grace-expired");
       }
+    } else if (parsed.kind === "panic") {
+      if (record.status !== "active" || record.panicDeadline === undefined) {
+        await this.scheduler.cancelPanic(record.id);
+      } else if (this.now() < record.panicDeadline) {
+        // Clock skew or an early wake; re-anchor the same deadline.
+        await this.scheduler.schedulePanic(record.id, record.panicDeadline);
+      } else {
+        // Panic expiry force-cleans: open tabs do not rescue the container.
+        await this.cleanup.request(record.id, "panic-expired");
+      }
     }
     await this.updateBadge();
   }
@@ -413,6 +438,46 @@ export class Controller {
       this.forgetContainerTabs(record.id);
     }
     await this.updateBadge();
+  }
+
+  /**
+   * Panic wipe: arms a force-cleanup deadline on every active container in one
+   * batched transaction. Unlike the drain grace, tab activity does NOT cancel
+   * it – only an explicit cancel does. Returns how many containers were armed.
+   */
+  public async panicClean(): Promise<number> {
+    await this.initialize();
+    const state = await this.repository.snapshot();
+    const deadline = this.now() + state.settings.panicGraceSeconds * 1_000;
+    const armed: string[] = [];
+    await this.repository.transaction((draft) => {
+      for (const record of Object.values(draft.containers)) {
+        if (record.status !== "active") continue;
+        record.panicDeadline = deadline;
+        delete record.lastError;
+        armed.push(record.id);
+      }
+    });
+    await Promise.all(armed.map((id) => this.scheduler.schedulePanic(id, deadline)));
+    await this.updateBadge();
+    return armed.length;
+  }
+
+  /** Cancels every pending panic wipe; pending drains are left untouched. */
+  public async cancelPanicClean(): Promise<number> {
+    await this.initialize();
+    const cancelled: string[] = [];
+    await this.repository.transaction((draft) => {
+      for (const [id, record] of Object.entries(draft.containers)) {
+        if (record.status === "active" && record.panicDeadline !== undefined) {
+          delete record.panicDeadline;
+          cancelled.push(id);
+        }
+      }
+    });
+    await Promise.all(cancelled.map((id) => this.scheduler.cancelPanic(id)));
+    await this.updateBadge();
+    return cancelled.length;
   }
 
   public async updateSettings(value: unknown): Promise<void> {
@@ -596,16 +661,12 @@ export class Controller {
 
   private async updateBadge(): Promise<void> {
     try {
-      const state = await this.repository.snapshot();
-      const records = Object.values(state.containers);
-      const failed = records.some((record) => record.status === "failed");
-      const pending = records.some(
-        (record) => record.status === "pending" || record.status === "cleaning",
-      );
+      // Primitive summary read: avoids cloning the full persisted state
+      // (including bounded cleanup history) on every background event.
+      const { total, failed, pending } = await this.repository.badgeSummary();
       if (failed) await this.adapter.setBadge("!", "#b42318");
       else if (pending) await this.adapter.setBadge("…", "#b54708");
-      else if (records.length > 0)
-        await this.adapter.setBadge(String(records.length), "#087f8c");
+      else if (total > 0) await this.adapter.setBadge(String(total), "#087f8c");
       else await this.adapter.setBadge("", "#087f8c");
     } catch (error) {
       this.logger.warn("Could not update toolbar badge", {

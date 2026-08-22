@@ -5,6 +5,7 @@ import { SETTINGS_EXPORT_VERSION, STATE_SCHEMA_VERSION } from "./types";
 const MAX_IMPORT_BYTES = 65_536;
 const MAX_INACTIVITY_MINUTES = 10_080;
 const MAX_GRACE_SECONDS = 600;
+const DEFAULT_PANIC_GRACE_SECONDS = 10;
 const SAFE_NAME = /^[^\p{Cc}\p{Cf}]{1,30}$/u;
 const SAFE_STYLE_NAME = /^[a-z][a-z0-9-]{0,31}$/;
 const ALLOWED_SETTING_KEYS = new Set([
@@ -16,6 +17,7 @@ const ALLOWED_SETTING_KEYS = new Set([
   "cleanup",
   "retry",
   "cleanupHistoryLimit",
+  "panicGraceSeconds",
 ]);
 
 export class ValidationError extends Error {
@@ -211,6 +213,15 @@ export function validateSettings(value: unknown): Settings {
       500,
       "settings.cleanupHistoryLimit",
     ),
+    panicGraceSeconds:
+      value["panicGraceSeconds"] === undefined
+        ? DEFAULT_PANIC_GRACE_SECONDS
+        : numberInRange(
+            value["panicGraceSeconds"],
+            0,
+            MAX_GRACE_SECONDS,
+            "settings.panicGraceSeconds",
+          ),
   };
 }
 

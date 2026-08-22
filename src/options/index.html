@@ -94,6 +94,12 @@
                 <button id="create-reusable" class="button secondary" type="button">
                   <span aria-hidden="true">↻</span> Temporary space
                 </button>
+                <button id="cancel-panic" class="button secondary" type="button" hidden>
+                  Cancel wipe
+                </button>
+                <button id="panic-clean" class="button danger" type="button">
+                  Panic clean
+                </button>
               </div>
             </div>
 
@@ -389,6 +395,13 @@
               </div>
               <hr />
               <div class="retention-row">
+                <label class="field inline"
+                  ><span>Panic wipe grace (seconds)</span
+                  ><input id="panic-grace" type="number" min="0" max="600" /><small
+                    >Undo window after Panic clean before every active session
+                    force-cleans. 0 = instant.</small
+                  ></label
+                >
                 <label class="field inline"
                   ><span>Cleanup records retained</span
                   ><input id="history-limit" type="number" min="0" max="500"

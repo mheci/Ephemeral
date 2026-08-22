@@ -103,6 +103,25 @@ describe("settings validation", () => {
     expect(() => validateSettings(invalid)).toThrow(/sweepGlobalHistory/);
   });
 
+  it("defaults a missing panic grace to 10s and bounds its range", () => {
+    const settings = createDefaultSettings();
+    const legacy = { ...settings } as Record<string, unknown>;
+    delete legacy["panicGraceSeconds"];
+    expect(validateSettings(legacy).panicGraceSeconds).toBe(10);
+
+    const overRange = createDefaultSettings();
+    overRange.panicGraceSeconds = 601;
+    expect(() => validateSettings(overRange)).toThrow(/0 to 600/);
+
+    const fractional = createDefaultSettings();
+    fractional.panicGraceSeconds = 2.5;
+    expect(() => validateSettings(fractional)).toThrow(/integer/);
+
+    const explicit = createDefaultSettings();
+    explicit.panicGraceSeconds = 0;
+    expect(validateSettings(explicit).panicGraceSeconds).toBe(0);
+  });
+
   it.each([
     null,
     {},

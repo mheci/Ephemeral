@@ -10,6 +10,7 @@ describe("production defaults", () => {
       minutes: 30,
     });
     expect(settings.cleanupHistoryLimit).toBe(50);
+    expect(settings.panicGraceSeconds).toBe(10);
     expect(settings.retry).toEqual({
       maxAttempts: 5,
       delaysMinutes: [1, 5, 15, 60, 240],

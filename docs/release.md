@@ -45,6 +45,12 @@ Release workflow rebuilds, retests tagged source, creates deterministic archives
 
 AMO creds in protected `amo-production` env. No public AMO listing – GitHub is distribution.
 
+A follow-up job ("Publish Firefox update manifest") regenerates `updates.json` from the published
+releases, sanity-checks it against the manifest's gecko id/urls, and deploys it to `gh-pages`
+(fast-forward only) so https://mheci.github.io/Ephemeral/updates.json serves the auto-update channel.
+The job runs for tag builds and dispatches with a resolved tag, and skips scheduled runs that found
+nothing to sign. Never edit updates.json by hand.
+
 Complete only when signed XPI attached and its version, ID, install, UI startup, cleanup smoke test pass.
 
 ## Versioning

@@ -42,6 +42,10 @@ export class MessageRouter {
         case "CLEANUP_ALL":
           await this.controller.cleanupAll();
           return this.success();
+        case "PANIC_CLEAN":
+          return this.success(await this.controller.panicClean());
+        case "CANCEL_PANIC_CLEAN":
+          return this.success(await this.controller.cancelPanicClean());
         case "UPDATE_SETTINGS":
           await this.controller.updateSettings(message.settings);
           return this.success();

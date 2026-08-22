@@ -50,6 +50,12 @@ function validRecord(value: unknown): value is ContainerRecord {
   ) {
     return false;
   }
+  if (
+    value["panicDeadline"] !== undefined &&
+    !Number.isFinite(value["panicDeadline"])
+  ) {
+    return false;
+  }
   try {
     validateLifecyclePolicy(value["policy"]);
     return true;
@@ -192,6 +198,43 @@ export class StateRepository {
     await this.initialize();
     await this.queue;
     return structuredClone(this.requireState());
+  }
+
+  /**
+   * Hot-path read for the toolbar badge. Returns primitives only – no
+   * structuredClone of containers or cleanup history, so per-event badge
+   * updates stay O(containers) without copying the persisted state.
+   */
+  public async badgeSummary(): Promise<{
+    total: number;
+    failed: boolean;
+    pending: boolean;
+  }> {
+    await this.initialize();
+    await this.queue;
+    const state = this.requireState();
+    let total = 0;
+    let failed = false;
+    let pending = false;
+    for (const record of Object.values(state.containers)) {
+      total += 1;
+      if (record.status === "failed") failed = true;
+      else if (record.status === "pending" || record.status === "cleaning")
+        pending = true;
+    }
+    return { total, failed, pending };
+  }
+
+  /** Hot-path id lookup by cookie store; returns a primitive, never a clone. */
+  public async containerIdForCookieStore(
+    cookieStoreId: string,
+  ): Promise<string | undefined> {
+    await this.initialize();
+    await this.queue;
+    for (const [id, record] of Object.entries(this.requireState().containers)) {
+      if (record.cookieStoreId === cookieStoreId) return id;
+    }
+    return undefined;
   }
 
   public async transaction<T>(mutator: Mutator<T>): Promise<T> {
