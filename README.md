@@ -1,10 +1,14 @@
-<p align="center"><img src="docs/assets/logo.svg" alt="Ephemeral" width="460"></p>
-
 # Ephemeral
+
+[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-orange.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/mheci/Ephemeral)](https://github.com/mheci/Ephemeral/releases/latest)
+[![Firefox](https://img.shields.io/badge/Firefox-153%2B-blue)](https://www.mozilla.org/firefox)
 
 **Private tabs that clean themselves.** One hotkey, zero traces.
 
 Ephemeral creates temporary Firefox containers – isolated spaces for browsing. When you close the last tab, everything inside that container is erased automatically. No history, no cookies, no leftover data. It feels like normal browsing, but completely private.
+
+> Personal project, experimental. Anything can change or break without notice.
 
 ## For Novices
 
@@ -44,7 +48,7 @@ Installs of older versions must reinstall once from a v2.4.0+ signed XPI to move
 
 - `Ctrl+Alt+E` / `MacCtrl+Shift+E` – New ephemeral tab (auto-cleans)
 - `Ctrl+Alt+U` / `MacCtrl+Shift+U` – New ephemeral space (stays open for many tabs)
-- Assignable – New ephemeral window (dedicated window, cleans when closed)
+- New ephemeral window (dedicated window, cleans when closed) - bind one under Manage Extension Shortcuts
 - `Ctrl+Shift+Period` – Open popup
 
 Change shortcuts: Add-ons Manager → Gear → Manage Extension Shortcuts
@@ -82,8 +86,6 @@ Container-scoped removal works for cookies, IndexedDB, local/session storage, ca
 - Only stores settings, container records, bounded cleanup reports locally
 - No URLs, cookies, or page content stored
 
-See [Privacy](docs/privacy.md) and [Security](SECURITY.md).
-
 ## Efficiency
 
 - Event-driven, non-persistent background – no polling
@@ -103,11 +105,9 @@ npm run build
 npm run package # artifacts/*.zip
 ```
 
-## Docs
+## Contributing
 
-- [Technical](docs/technical.md) – architecture & resource use
-- [Privacy](docs/privacy.md)
-- [Release](docs/release.md)
+Source lives in `src/`. Report bugs or request features on [Issues](https://github.com/mheci/Ephemeral/issues).
 
 ## License
 
