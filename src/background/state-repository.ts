@@ -180,7 +180,7 @@ export class StateRepository {
   public async initialize(): Promise<PersistedState> {
     if (this.state) return structuredClone(this.state);
     const raw = await this.adapter.loadState();
-    let repaired = false;
+    let repaired: boolean;
     try {
       const recovered = recoverState(raw);
       this.state = recovered.state;
