@@ -24,6 +24,15 @@ updates:
       development-tooling:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    # Major bumps of the lint/test toolchain routinely need coordinated changes
+    # across several packages, so an automated single-package major PR can only
+    # ever fail `npm ci`. typescript 7 is the current example: typescript-eslint
+    # caps its peer range at <6.1.0, so adopting TS 7 requires typescript-eslint
+    # to widen support first. Those upgrades are deliberate maintenance work,
+    # tracked as an issue instead of arriving as unmergeable noise.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     labels:
       - dependencies
 
