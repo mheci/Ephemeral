@@ -1,21 +1,48 @@
 version: 2
 updates:
+  # Dev dependencies only — the extension ships zero runtime dependencies, so
+  # these never reach users. Minor/patch updates are grouped into one PR a week
+  # to keep the review queue small enough for a single maintainer to stay on top
+  # of, while major bumps arrive as individual PRs so they can be reviewed with
+  # the coordinated changes they usually require (eslint 10 needs @eslint/js 10
+  # AND a matching typescript-eslint, for example).
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 2
+    # Wait before adopting a freshly published version. Compromised packages are
+    # typically caught and yanked within days, so a cooldown converts "we were
+    # the first to install the malicious release" into "we never installed it".
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: scope
     groups:
       development-tooling:
-        dependency-type: development
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+    labels:
+      - dependencies
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 1
+    # Wait before adopting a freshly published version. Compromised packages are
+    # typically caught and yanked within days, so a cooldown converts "we were
+    # the first to install the malicious release" into "we never installed it".
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "ci"
     groups:
       workflow-actions:
         patterns: ["*"]
+    labels:
+      - dependencies
+      - ci
