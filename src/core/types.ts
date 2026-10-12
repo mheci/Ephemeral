@@ -14,10 +14,7 @@ export type CleanupTrigger =
   | "external-removal";
 export type ContainerStatus = "active" | "pending" | "cleaning" | "failed";
 export type CleanupOutcome =
-  | "completed"
-  | "completed-with-limitations"
-  | "failed"
-  | "cancelled";
+  "completed" | "completed-with-limitations" | "failed" | "cancelled";
 export type StepOutcome = "succeeded" | "skipped" | "limited" | "failed";
 
 export type InactivityPolicy = {
@@ -217,5 +214,4 @@ export type RequestMessage =
   | { type: "REMOVE_DOWNLOADS_PERMISSION" };
 
 export type ResponseMessage =
-  | { ok: true; data?: unknown }
-  | { ok: false; error: string; code: string };
+  { ok: true; data?: unknown } | { ok: false; error: string; code: string };

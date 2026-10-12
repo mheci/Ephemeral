@@ -18,8 +18,6 @@ export class Logger {
     _message: string,
     _context?: Record<string, string | number | boolean>,
   ): void {
-    void _message;
-    void _context;
     // No-op for invisibility – debug logs would make us visible and waste CPU
   }
 
@@ -27,8 +25,6 @@ export class Logger {
     _message: string,
     _context?: Record<string, string | number | boolean>,
   ): void {
-    void _message;
-    void _context;
     // No-op for efficiency – info logs not needed in production
   }
 
