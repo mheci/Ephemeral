@@ -5,7 +5,7 @@
   "description": "Privacy-first disposable Firefox containers",
   "type": "module",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22.12"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -41,7 +41,7 @@
     "globals": "17.13.0",
     "prettier": "3.9.9",
     "selenium-webdriver": "4.50.0",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.71.0",
     "vitest": "5.0.3"
   }
